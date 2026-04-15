@@ -1,0 +1,76 @@
+.cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--cell);
+  height: var(--cell);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--fg);
+  outline: none;
+  isolation: isolate;
+}
+
+.cell[data-empty] {
+  cursor: default;
+}
+
+.cell::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1px solid transparent;
+  transition: border-color 180ms var(--ease-out);
+  pointer-events: none;
+}
+
+.cell:hover:not([data-empty])::before,
+.cell:focus-visible::before {
+  border-color: var(--faint);
+}
+
+.cell[data-origin]::before {
+  border-color: var(--accent);
+}
+
+.layer {
+  position: absolute;
+  inset: 6px;
+  display: grid;
+  place-items: center;
+  color: currentColor;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+  transform: scale(0);
+  opacity: 0;
+  transition: transform var(--swap-duration) var(--spring) var(--d, 0ms), opacity
+    var(--swap-duration) var(--ease-out) var(--d, 0ms);
+}
+
+.layer[data-state="in"] {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.layer svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.75;
+}
+
+.layer svg[data-pack="phosphor"] {
+  stroke: none;
+  fill: currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layer {
+    transform: none !important;
+    transition: opacity var(--swap-duration) linear var(--d, 0ms);
+  }
+}

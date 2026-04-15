@@ -1,26 +1,83 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+
+  --bg: #000;
+  --fg: #fff;
+  --dim: color-mix(in oklab, var(--fg) 42%, transparent);
+  --faint: color-mix(in oklab, var(--fg) 10%, transparent);
+  --accent: #ff6a1a;
+
+  --cell: 48px;
+  --gap: 1px;
+
+  --ring-delay: 18ms;
+  --swap-duration: 520ms;
+
+  /* spring overshoot easing — compact linear() approximation */
+  --spring: linear(
+    0,
+    0.009,
+    0.035 2.1%,
+    0.141,
+    0.3 8.1%,
+    0.516,
+    0.745 16.4%,
+    0.87,
+    0.957,
+    1.015,
+    1.045,
+    1.055,
+    1.051,
+    1.035,
+    0.999 38.2%,
+    0.959,
+    0.926,
+    0.908,
+    0.906 49.3%,
+    0.977 63.2%,
+    1.002 76.7%,
+    0.997 95.9%,
+    1
+  );
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+  --color-dim: var(--dim);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+::selection {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --spring: linear(0, 1);
+    --swap-duration: 160ms;
+    --ring-delay: 0ms;
+  }
 }

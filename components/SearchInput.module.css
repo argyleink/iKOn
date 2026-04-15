@@ -1,0 +1,56 @@
+.wrap {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.field {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  min-width: 320px;
+  background: var(--bg);
+  border: 1px solid var(--faint);
+  backdrop-filter: blur(6px);
+  transition: border-color 240ms var(--ease-out), box-shadow 240ms var(--ease-out);
+}
+
+.field:focus-within {
+  border-color: var(--fg);
+  box-shadow: 0 0 0 1px var(--bg), 0 0 0 2px var(--fg);
+}
+
+.prompt {
+  color: var(--dim);
+  font-size: 11px;
+}
+
+.input {
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--fg);
+  font: inherit;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  caret-color: var(--accent);
+  width: 100%;
+}
+
+.input::placeholder {
+  color: var(--dim);
+  text-transform: uppercase;
+}
+
+.meta {
+  color: var(--dim);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
