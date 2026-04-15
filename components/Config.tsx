@@ -10,6 +10,7 @@ export type ConfigValues = {
   swapInMs: number
   swapOutMs: number
   exitPushPx: number
+  waveOffsetMs: number
   aftershockDelayMs: number
   aftershockAmount: number
   resizeDebounceMs: number
@@ -41,10 +42,11 @@ export const SPRING_CURVES = {
 export const DEFAULT_CONFIG: ConfigValues = {
   cellPx: 48,
   gapPx: 1,
-  ringStepMs: 28,
+  ringStepMs: 38,
   swapInMs: 720,
-  swapOutMs: 520,
-  exitPushPx: 22,
+  swapOutMs: 460,
+  exitPushPx: 44,
+  waveOffsetMs: 260,
   aftershockDelayMs: 140,
   aftershockAmount: 0.08,
   resizeDebounceMs: 300,
@@ -52,7 +54,7 @@ export const DEFAULT_CONFIG: ConfigValues = {
   fg: '#ffffff',
   accent: '#ff6a1a',
   curve: 'ripple',
-  originFromCenter: false,
+  originFromCenter: true,
 }
 
 export function applyConfig(cfg: ConfigValues) {
@@ -63,6 +65,7 @@ export function applyConfig(cfg: ConfigValues) {
   r.setProperty('--swap-in', `${cfg.swapInMs}ms`)
   r.setProperty('--swap-out', `${cfg.swapOutMs}ms`)
   r.setProperty('--exit-push', `${cfg.exitPushPx}px`)
+  r.setProperty('--wave-offset', `${cfg.waveOffsetMs}ms`)
   r.setProperty('--aftershock-delay', `${cfg.aftershockDelayMs}ms`)
   r.setProperty('--aftershock-amount', `${cfg.aftershockAmount}`)
   r.setProperty('--bg', cfg.bg)
@@ -161,9 +164,17 @@ export function Config({ open, values, onChange, onClose }: Props) {
         value={values.exitPushPx}
         onChange={(v) => set('exitPushPx', v)}
       />
+      <Slider
+        label="wave offset (ms)"
+        min={0}
+        max={800}
+        step={20}
+        value={values.waveOffsetMs}
+        onChange={(v) => set('waveOffsetMs', v)}
+      />
 
       <label className={styles.row}>
-        <span className={styles.label}>viewport-center origin</span>
+        <span className={styles.label}>anchor entry at origin</span>
         <input
           type="checkbox"
           className={styles.toggle}

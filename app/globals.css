@@ -12,10 +12,11 @@
   --cell: 48px;
   --gap: 1px;
 
-  --ring-step: 28ms;
+  --ring-step: 38ms;
   --swap-in: 720ms;
-  --swap-out: 520ms;
-  --exit-push: 22px;
+  --swap-out: 460ms;
+  --exit-push: 44px;
+  --wave-offset: 260ms;
 
   --spring: linear(
     0,
@@ -108,5 +109,6 @@ button {
     --spring: linear(0, 1);
     --spring-out: linear(1, 0);
     --exit-push: 0px;
+    --wave-offset: 0ms;
   }
 }

@@ -1,34 +1,32 @@
 'use client'
 
 import type { Icon } from '@/lib/types'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 
 /**
- * Tracks the outgoing icon without feedback loops.
+ * Tracks current + previous icon with zero effects.
  *
- * We detect prop changes during render (React explicitly allows setting state
- * of the currently-rendering component as long as it's guarded by a condition
- * that becomes false after the update). Then a single effect clears `prev`
- * after the exit-animation window.
+ * When the prop changes, we shift the outgoing icon into `prev` via a
+ * render-time state update (React permits this because the condition becomes
+ * false on the follow-up render). `prev` is not timed out — it's replaced on
+ * the next change and its layer stays out of view until then.
  *
- * The previous implementation set state inside useEffect with a ref-read, which
- * in some dev-mode double-invocation paths tripped React 19's max-update-depth
- * detector when effects re-ran before cleanup settled.
+ * The old → new transition itself is fully declarative: both layers are
+ * re-keyed (`in-<id>` / `out-<id>`) so React mounts fresh elements, and CSS
+ * `@starting-style` in Cell.module.css defines the "from" state. No effect,
+ * no rAF dance, no staged-flag race — the browser schedules the transition at
+ * mount time, which is precisely what we want for a wave that starts the
+ * instant a swap is committed.
  */
 export function useSwap(icon: Icon | null): { current: Icon | null; prev: Icon | null } {
-  const [prev, setPrev] = useState<Icon | null>(null)
-  const lastIconRef = useRef<Icon | null>(icon)
+  const [state, setState] = useState<{ current: Icon | null; prev: Icon | null }>(() => ({
+    current: icon,
+    prev: null,
+  }))
 
-  if (lastIconRef.current?.id !== icon?.id) {
-    setPrev(lastIconRef.current)
-    lastIconRef.current = icon
+  if (state.current?.id !== icon?.id) {
+    setState((s) => ({ current: icon, prev: s.current }))
   }
 
-  useEffect(() => {
-    if (!prev) return
-    const t = window.setTimeout(() => setPrev(null), 1600)
-    return () => window.clearTimeout(t)
-  }, [prev])
-
-  return { current: icon, prev }
+  return state
 }

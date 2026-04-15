@@ -11,7 +11,10 @@
   color: var(--fg);
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  contain: layout style;
+  /* style-only containment so scaled layers can paint past cell bounds
+     (the shockwave expansion relies on this) while React still benefits
+     from the isolation. */
+  contain: style;
   outline: 0 dashed transparent;
   transition: outline-offset 420ms var(--spring), outline-color 200ms var(--ease-out);
 }
@@ -53,7 +56,29 @@
   z-index: 4;
 }
 
-/* --- Swap layers: GPU-only --- */
+/* --- Shockwave layers --------------------------------------------------
+ *
+ * Each layer is inserted FRESH on every swap (keyed `in-<id>` / `out-<id>`).
+ * The transition's "from" state is declared via @starting-style, which the
+ * browser applies the instant the node mounts — no JS staging, no rAF race.
+ *
+ * Per-cell CSS variables (set imperatively by GridCells on the button):
+ *   --d       radial delay:       distance × ring-step
+ *   --dx/--dy unit vector from the shockwave origin → this cell
+ *   --ocx/--ocy  pixel offset from THIS cell's center → the origin; used as
+ *                the ENTER layer's transform-origin so new icons emerge
+ *                from the epicenter
+ *   --stroke  stroke-width, weighted by distance
+ *   --alpha   resting opacity, weighted by distance
+ *
+ * Timing story:
+ *   t = d                      — the EXIT wave reaches this cell; old icon
+ *                                gets blown outward along (dx, dy) and
+ *                                collapses to scale(0)
+ *   t = d + wave-offset        — the ENTER wave reaches this cell; new icon
+ *                                emerges from scale(0) at the epicenter and
+ *                                rides the ripple curve out to its cell
+ * --------------------------------------------------------------------- */
 
 .layer {
   position: absolute;
@@ -62,43 +87,52 @@
   place-items: center;
   color: currentColor;
   pointer-events: none;
-  transform-origin: calc(50% + var(--ocx, 0px)) calc(50% + var(--ocy, 0px));
   will-change: transform, opacity;
-  transform: translate3d(0, 0, 0) scale(1);
   backface-visibility: hidden;
 }
 
+/* ENTER: emerges from the epicenter (transform-origin offset to origin),
+   then rides the spring ripple out to its resting cell position. */
 .layer[data-role="in"] {
-  transform: translate3d(0, 0, 0) scale(0);
-  opacity: 0;
-  transition: transform var(--swap-in) var(--spring) var(--d, 0ms), opacity
-    calc(var(--swap-in) * 0.6) var(--ease-out) var(--d, 0ms);
-}
-
-.layer[data-role="in"][data-state="on"] {
+  transform-origin: calc(50% + var(--ocx, 0px)) calc(50% + var(--ocy, 0px));
   transform: translate3d(0, 0, 0) scale(1);
   opacity: var(--alpha, 1);
+  transition:
+    transform var(--swap-in, 720ms) var(--spring)
+      calc(var(--d, 0ms) + var(--wave-offset, 260ms)),
+    opacity calc(var(--swap-in, 720ms) * 0.7) var(--ease-out)
+      calc(var(--d, 0ms) + var(--wave-offset, 260ms));
+
+  @starting-style {
+    transform: translate3d(0, 0, 0) scale(0);
+    opacity: 0;
+  }
 }
 
+/* EXIT: the wave passes this cell, pushing the old icon outward along its
+   radial direction and collapsing it to nothing in place. */
 .layer[data-role="out"] {
-  transform: translate3d(0, 0, 0) scale(1);
-  opacity: var(--alpha, 1);
-  transition: transform var(--swap-out) var(--spring-out) var(--d, 0ms), opacity var(--swap-out)
-    var(--ease-out) var(--d, 0ms);
-}
-
-.layer[data-role="out"][data-state="off"] {
-  transform: translate3d(
-      calc(var(--dx, 0) * var(--exit-push)),
-      calc(var(--dy, 0) * var(--exit-push)),
+  transform-origin: 50% 50%;
+  transform:
+    translate3d(
+      calc(var(--dx, 0) * var(--exit-push, 22px)),
+      calc(var(--dy, 0) * var(--exit-push, 22px)),
       0
     )
     scale(0);
   opacity: 0;
+  transition:
+    transform var(--swap-out, 520ms) var(--spring-out) var(--d, 0ms),
+    opacity var(--swap-out, 520ms) var(--ease-out) var(--d, 0ms);
+
+  @starting-style {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: var(--alpha, 1);
+  }
 }
 
-.cell:hover:not([data-empty]) .layer[data-role="in"][data-state="on"],
-.cell:focus-visible .layer[data-role="in"][data-state="on"] {
+.cell:hover:not([data-empty]) .layer[data-role="in"],
+.cell:focus-visible .layer[data-role="in"] {
   opacity: 1;
 }
 .cell:hover:not([data-empty]) .layer svg,
@@ -123,23 +157,21 @@
   .cell {
     transition: outline-offset 220ms var(--ease-fun);
   }
-  .layer {
-    transform: none !important;
-    opacity: 0;
-    transition: opacity var(--swap-in) var(--ease-fun) var(--d, 0ms);
-  }
   .layer[data-role="in"] {
-    opacity: 0;
-  }
-  .layer[data-role="in"][data-state="on"] {
-    opacity: 1;
+    transform: none;
+    transition: opacity calc(var(--swap-in, 720ms) * 0.6) var(--ease-fun)
+      calc(var(--d, 0ms) + var(--wave-offset, 260ms));
+    @starting-style {
+      opacity: 0;
+    }
   }
   .layer[data-role="out"] {
-    opacity: 1;
-    transition: opacity var(--swap-out) var(--ease-fun) var(--d, 0ms);
-  }
-  .layer[data-role="out"][data-state="off"] {
+    transform: none;
     opacity: 0;
+    transition: opacity var(--swap-out, 520ms) var(--ease-fun) var(--d, 0ms);
+    @starting-style {
+      opacity: var(--alpha, 1);
+    }
   }
   .layer svg {
     stroke-width: 1.75;
