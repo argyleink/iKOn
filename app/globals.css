@@ -12,36 +12,47 @@
   --cell: 48px;
   --gap: 1px;
 
-  --ring-delay: 18ms;
-  --swap-duration: 520ms;
+  --ring-step: 28ms;
+  --swap-in: 720ms;
+  --swap-out: 520ms;
+  --exit-push: 22px;
 
-  /* spring overshoot easing — compact linear() approximation */
   --spring: linear(
     0,
-    0.009,
-    0.035 2.1%,
-    0.141,
-    0.3 8.1%,
-    0.516,
-    0.745 16.4%,
-    0.87,
-    0.957,
-    1.015,
-    1.045,
+    0.002,
+    0.012 2%,
+    0.055,
+    0.142 8%,
+    0.287,
+    0.486 16%,
+    0.72,
+    0.952 24%,
+    1.13,
+    1.221 32%,
+    1.22,
+    1.158 38%,
     1.055,
-    1.051,
-    1.035,
-    0.999 38.2%,
-    0.959,
-    0.926,
-    0.908,
-    0.906 49.3%,
-    0.977 63.2%,
-    1.002 76.7%,
-    0.997 95.9%,
+    0.956 48%,
+    0.912,
+    0.928 58%,
+    0.988 65%,
+    1.045 72%,
+    1.055 78%,
+    1.028 85%,
+    0.996 91%,
     1
   );
+
+  --spring-out: linear(1, 1.008 4%, 0.992 10%, 0.92 20%, 0.78 35%, 0.52 55%, 0.22 75%, 0.06 90%, 0);
+
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-fun: cubic-bezier(0.76, 0, 0.24, 1);
+
+  /* Unregistered custom properties: CSS treats them as strings, so transitions
+     and animations between values are discrete jumps with no interpolation.
+     The Rainbow client sets these on :root at intervals / on selectionchange. */
+  --caret: color(display-p3 1 0.1 0.45);
+  --selection: color(display-p3 0.2 1 0.6);
 }
 
 @theme inline {
@@ -53,31 +64,49 @@
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
 }
 
+*,
+*::before,
+*::after {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  box-sizing: border-box;
+}
+
 html,
 body {
-  height: 100%;
+  height: 100dvh;
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.02em;
-  text-transform: uppercase;
+  touch-action: manipulation;
 }
 
 body {
   overflow: hidden;
   overscroll-behavior: none;
+  text-transform: uppercase;
 }
 
 ::selection {
-  background: var(--fg);
+  background: var(--selection);
   color: var(--bg);
+}
+
+input,
+textarea {
+  caret-color: var(--caret);
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
     --spring: linear(0, 1);
-    --swap-duration: 160ms;
-    --ring-delay: 0ms;
+    --spring-out: linear(1, 0);
+    --exit-push: 0px;
   }
 }

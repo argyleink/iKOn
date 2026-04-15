@@ -9,8 +9,11 @@
   padding: 0;
   cursor: pointer;
   color: var(--fg);
-  outline: none;
-  isolation: isolate;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  contain: layout style;
+  outline: 0 dashed transparent;
+  transition: outline-offset 420ms var(--spring), outline-color 200ms var(--ease-out);
 }
 
 .cell[data-empty] {
@@ -26,14 +29,31 @@
   pointer-events: none;
 }
 
-.cell:hover:not([data-empty])::before,
-.cell:focus-visible::before {
+.cell:hover:not([data-empty])::before {
   border-color: var(--faint);
 }
 
-.cell[data-origin]::before {
+/* --- Springing dashed focus ring --- */
+.cell:focus-visible {
+  outline: 2px dashed var(--caret, var(--accent));
+  outline-offset: 6px;
+  z-index: 4;
+}
+
+.cell:focus-visible::before {
   border-color: var(--accent);
 }
+
+.cell[data-focus]::before {
+  border-color: var(--accent);
+}
+
+.cell:hover:not([data-empty]),
+.cell:focus-visible {
+  z-index: 4;
+}
+
+/* --- Swap layers: GPU-only --- */
 
 .layer {
   position: absolute;
@@ -42,17 +62,48 @@
   place-items: center;
   color: currentColor;
   pointer-events: none;
-  transform-origin: 50% 50%;
+  transform-origin: calc(50% + var(--ocx, 0px)) calc(50% + var(--ocy, 0px));
   will-change: transform, opacity;
-  transform: scale(0);
-  opacity: 0;
-  transition: transform var(--swap-duration) var(--spring) var(--d, 0ms), opacity
-    var(--swap-duration) var(--ease-out) var(--d, 0ms);
+  transform: translate3d(0, 0, 0) scale(1);
+  backface-visibility: hidden;
 }
 
-.layer[data-state="in"] {
-  transform: scale(1);
+.layer[data-role="in"] {
+  transform: translate3d(0, 0, 0) scale(0);
+  opacity: 0;
+  transition: transform var(--swap-in) var(--spring) var(--d, 0ms), opacity
+    calc(var(--swap-in) * 0.6) var(--ease-out) var(--d, 0ms);
+}
+
+.layer[data-role="in"][data-state="on"] {
+  transform: translate3d(0, 0, 0) scale(1);
+  opacity: var(--alpha, 1);
+}
+
+.layer[data-role="out"] {
+  transform: translate3d(0, 0, 0) scale(1);
+  opacity: var(--alpha, 1);
+  transition: transform var(--swap-out) var(--spring-out) var(--d, 0ms), opacity var(--swap-out)
+    var(--ease-out) var(--d, 0ms);
+}
+
+.layer[data-role="out"][data-state="off"] {
+  transform: translate3d(
+      calc(var(--dx, 0) * var(--exit-push)),
+      calc(var(--dy, 0) * var(--exit-push)),
+      0
+    )
+    scale(0);
+  opacity: 0;
+}
+
+.cell:hover:not([data-empty]) .layer[data-role="in"][data-state="on"],
+.cell:focus-visible .layer[data-role="in"][data-state="on"] {
   opacity: 1;
+}
+.cell:hover:not([data-empty]) .layer svg,
+.cell:focus-visible .layer svg {
+  stroke-width: 2.25;
 }
 
 .layer svg {
@@ -60,7 +111,7 @@
   height: 100%;
   stroke: currentColor;
   fill: none;
-  stroke-width: 1.75;
+  stroke-width: var(--stroke, 1.75);
 }
 
 .layer svg[data-pack="phosphor"] {
@@ -69,8 +120,32 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .cell {
+    transition: outline-offset 220ms var(--ease-fun);
+  }
   .layer {
     transform: none !important;
-    transition: opacity var(--swap-duration) linear var(--d, 0ms);
+    opacity: 0;
+    transition: opacity var(--swap-in) var(--ease-fun) var(--d, 0ms);
+  }
+  .layer[data-role="in"] {
+    opacity: 0;
+  }
+  .layer[data-role="in"][data-state="on"] {
+    opacity: 1;
+  }
+  .layer[data-role="out"] {
+    opacity: 1;
+    transition: opacity var(--swap-out) var(--ease-fun) var(--d, 0ms);
+  }
+  .layer[data-role="out"][data-state="off"] {
+    opacity: 0;
+  }
+  .layer svg {
+    stroke-width: 1.75;
+  }
+  .cell:hover:not([data-empty]) .layer svg,
+  .cell:focus-visible .layer svg {
+    stroke-width: 1.75;
   }
 }

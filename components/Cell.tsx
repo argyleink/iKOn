@@ -1,72 +1,107 @@
 'use client'
 
+import { useStagedFlag } from '@/lib/hooks/useStagedFlag'
+import { useSwap } from '@/lib/hooks/useSwap'
 import type { Icon } from '@/lib/types'
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useRef } from 'react'
 import styles from './Cell.module.css'
 
-type Props = {
+type CellProps = {
   icon: Icon | null
-  delayMs: number
   index: number
-  originIndex: number | null
-  onClick: (icon: Icon, el: HTMLButtonElement) => void
+  delayMs: number
+  dx: number
+  dy: number
+  ocx: number
+  ocy: number
+  weight: number
+  focused: boolean
+  onCopy: (icon: Icon, el: HTMLButtonElement) => void
+  onFocusIcon: (icon: Icon, el: HTMLButtonElement) => void
 }
 
-/** Keep previous icon around so we can crossfade/scale it out while the new one pops in. */
-function useSwap(icon: Icon | null) {
-  const [current, setCurrent] = useState<Icon | null>(icon)
-  const [prev, setPrev] = useState<Icon | null>(null)
-  const prevIdRef = useRef<string | null>(icon?.id ?? null)
+const prettyName = (name: string) => name.replace(/-/g, ' ')
 
-  useEffect(() => {
-    const nextId = icon?.id ?? null
-    if (nextId === prevIdRef.current) return
-    setPrev(current)
-    setCurrent(icon)
-    prevIdRef.current = nextId
-    const t = window.setTimeout(() => setPrev(null), 900)
-    return () => window.clearTimeout(t)
-  }, [icon, current])
-
-  return { current, prev }
-}
-
-function CellImpl({ icon, delayMs, index, originIndex, onClick }: Props) {
+function CellImpl({
+  icon,
+  index: _index,
+  delayMs,
+  dx,
+  dy,
+  ocx,
+  ocy,
+  weight,
+  focused,
+  onCopy,
+  onFocusIcon,
+}: CellProps) {
   const { current, prev } = useSwap(icon)
-  const inRef = useRef<HTMLSpanElement | null>(null)
-  const [entered, setEntered] = useState(false)
+  const entered = useStagedFlag(Boolean(current))
+  const exited = useStagedFlag(Boolean(prev))
+  const clickTimer = useRef<number | null>(null)
 
-  useEffect(() => {
-    setEntered(false)
-    if (!current) return
-    const id = requestAnimationFrame(() => setEntered(true))
-    return () => cancelAnimationFrame(id)
-  }, [current?.id])
+  const cellStyle = {
+    ['--d' as string]: `${delayMs}ms`,
+    ['--dx' as string]: dx.toFixed(3),
+    ['--dy' as string]: dy.toFixed(3),
+    ['--ocx' as string]: `${ocx.toFixed(1)}px`,
+    ['--ocy' as string]: `${ocy.toFixed(1)}px`,
+    ['--stroke' as string]: (1.1 + weight * 1.3).toFixed(2),
+    ['--alpha' as string]: (0.4 + weight * 0.6).toFixed(3),
+  } as React.CSSProperties
 
-  const isOrigin = originIndex === index
   return (
     <button
       type="button"
       className={styles.cell}
-      style={{ ['--d' as string]: `${delayMs}ms` }}
-      data-origin={isOrigin || undefined}
+      style={cellStyle}
+      data-focus={focused || undefined}
       data-empty={current ? undefined : true}
-      aria-label={current?.name ?? 'empty'}
-      onClick={(e) => current && onClick(current, e.currentTarget)}
+      aria-label={current ? `${prettyName(current.name)} icon · ${current.pack}` : 'empty cell'}
+      tabIndex={current ? 0 : -1}
+      onClick={(e) => {
+        if (!current) return
+        const el = e.currentTarget
+        if (clickTimer.current) {
+          window.clearTimeout(clickTimer.current)
+          clickTimer.current = null
+          onFocusIcon(current, el)
+          return
+        }
+        clickTimer.current = window.setTimeout(() => {
+          clickTimer.current = null
+          onCopy(current, el)
+        }, 220)
+      }}
+      onKeyDown={(e) => {
+        if (!current) return
+        // Space → copy; Enter → focus (same as double-click)
+        if (e.key === ' ') {
+          e.preventDefault()
+          onCopy(current, e.currentTarget)
+        } else if (e.key === 'Enter') {
+          e.preventDefault()
+          onFocusIcon(current, e.currentTarget)
+        }
+      }}
     >
       {prev ? (
         <span
           key={`prev-${prev.id}`}
           className={styles.layer}
+          data-role="out"
+          data-state={exited ? 'off' : undefined}
+          aria-hidden="true"
           dangerouslySetInnerHTML={{ __html: prev.svg }}
         />
       ) : null}
       {current ? (
         <span
           key={`cur-${current.id}`}
-          ref={inRef}
           className={styles.layer}
-          data-state={entered ? 'in' : undefined}
+          data-role="in"
+          data-state={entered ? 'on' : undefined}
+          aria-hidden="true"
           dangerouslySetInnerHTML={{ __html: current.svg }}
         />
       ) : null}
