@@ -8,6 +8,9 @@ export type CellGeometry = {
   d: string
   stroke: string
   alpha: string
+  /** Distance-from-center rank used as tabindex so tab order rotates out
+   *  from the center ring by ring. Same distance math as opacity/stroke. */
+  tab: number
 }
 
 type CellProps = {
@@ -23,7 +26,7 @@ function CellImpl({ icon, geometry, onCopy, onFocusIcon }: CellProps) {
   return (
     <button
       type="button"
-      className={`group w-[var(--cell)] h-[var(--cell)] p-1.5 flex items-center justify-center bg-transparent border-0 cursor-pointer text-fg select-none [contain:style] outline-0 outline-dashed outline-transparent transition-[outline-offset,outline-color] [-webkit-tap-highlight-color:transparent] data-[empty]:cursor-default focus-visible:outline-[2px_dashed_var(--outline,var(--accent))] focus-visible:[outline-offset:6px] focus-visible:z-4 hover:not-data-[empty]:z-4 ${styles.cell}`}
+      className={`superellipse group w-[var(--cell)] h-[var(--cell)] p-1.5 flex items-center justify-center bg-transparent border-0 cursor-pointer text-fg select-none [contain:style] [-webkit-tap-highlight-color:transparent] data-[empty]:cursor-default focus-visible:z-4 hover:not-data-[empty]:z-4 ${styles.cell}`}
       style={
         {
           '--d': geometry.d,
@@ -33,7 +36,7 @@ function CellImpl({ icon, geometry, onCopy, onFocusIcon }: CellProps) {
       }
       data-empty={icon ? undefined : true}
       aria-label={icon ? `${icon.name.replace(/-/g, ' ')} · ${icon.pack}` : 'empty cell'}
-      tabIndex={icon ? 0 : -1}
+      tabIndex={icon ? geometry.tab : -1}
       onClick={(e) => {
         if (!icon) return
         const el = e.currentTarget

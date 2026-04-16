@@ -58,7 +58,7 @@ export function SearchInput({ value, onChange, onClear, focusedIcon = null }: Pr
             onClick={onClear}
             aria-label={`Selected: ${focusedIcon.name.replace(/-/g, ' ')}. Click to clear.`}
             title="selected · click to clear"
-            className={`flex-none self-center grid place-items-center w-[var(--cell)] h-[var(--cell)] p-1.5 bg-transparent border border-[var(--outline,var(--fg))] text-[var(--outline,var(--fg))] cursor-pointer pointer-events-auto transition-colors duration-150 hover:bg-[var(--outline,var(--fg))] hover:text-bg focus-visible:outline-2 focus-visible:outline-dashed focus-visible:[outline-color:var(--outline)] focus-visible:outline-offset-[3px] ${styles.chip}`}
+            className={`superellipse flex-none self-center grid place-items-center w-[var(--cell)] h-[var(--cell)] p-1.5 bg-transparent border border-[var(--outline,var(--fg))] text-[var(--outline,var(--fg))] cursor-pointer pointer-events-auto transition-colors duration-150 hover:bg-[var(--outline,var(--fg))] hover:text-bg ${styles.chip}`}
           >
             <span
               key={focusedIcon.id}
@@ -102,7 +102,7 @@ export function SearchInput({ value, onChange, onClear, focusedIcon = null }: Pr
             onClick={handleClear}
             aria-label="clear search"
             title="clear"
-            className="flex-none self-center grid place-items-center w-[22px] h-[22px] rounded-full bg-transparent text-fg opacity-25 cursor-pointer pointer-events-auto transition-opacity duration-150 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-dashed focus-visible:[outline-color:var(--outline)] focus-visible:outline-offset-[3px]"
+            className="superellipse flex-none self-center grid place-items-center w-[22px] h-[22px] bg-transparent text-fg opacity-25 cursor-pointer pointer-events-auto transition-opacity duration-150 hover:opacity-100 focus-visible:opacity-100"
           >
             <svg
               viewBox="0 0 20 20"

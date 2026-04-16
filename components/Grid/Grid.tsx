@@ -3,15 +3,30 @@
 import type { Icon } from '@/lib/icons'
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { Toaster, toast } from 'sonner'
+
+/** Deep-link each icon pack to its open-source browser page. Phosphor and
+ *  iconoir don't have per-name detail URLs so we pre-fill their search. */
+function iconSourceUrl(icon: Icon): string {
+  const name = encodeURIComponent(icon.name)
+  switch (icon.pack) {
+    case 'lucide':
+      return `https://lucide.dev/icons/${name}`
+    case 'phosphor':
+      return `https://phosphoricons.com/?q=${name}`
+    case 'iconoir':
+      return `https://iconoir.com/?s=${name}`
+  }
+}
 import { Config, type ConfigValues, DEFAULT_CONFIG, INITIAL_VARS, applyConfig } from '../Config'
 import { SearchInput } from '../SearchInput'
-import styles from './Grid.module.css'
 import { GridCells } from './GridCells'
 import { Loader } from './Loader'
 import { type Mode, useCellAssembly } from './hooks/useCellAssembly'
 import { useGlobalKeys } from './hooks/useGlobalKeys'
 import { useGridMetrics } from './hooks/useGridMetrics'
 import { useIconDB } from './hooks/useIconDB'
+import { useShake } from './hooks/useShake'
+import { useSwapCycle } from './hooks/useSwapCycle'
 
 export function Grid() {
   const mainRef = useRef<HTMLElement | null>(null)
@@ -105,83 +120,13 @@ export function Grid() {
     mode,
   )
 
-  const [displayedIcons, setDisplayedIcons] = useState<(Icon | null)[]>([])
-  const [exiting, setExiting] = useState(false)
-  // `entered` flips true one frame after new icons are committed. That one-
-  // frame gap lets the browser see the "from" state (scale 0) before the
-  // "to" state (scale 1) is applied, which is what makes the CSS transition
-  // fire. Without it the browser would batch from+to into the same style
-  // calculation and skip the transition entirely.
-  const [entered, setEntered] = useState(false)
-
-  const prevModeRef = useRef<Mode | null>(null)
-  const latestIconsRef = useRef(cellIcons)
-  latestIconsRef.current = cellIcons
-  const enterRafRef = useRef(0)
   const gridRef = useRef<HTMLDivElement | null>(null)
 
-  // Mode-change controller: kicks off exit, commits entry on first
-  // render with data, or silently syncs on layout-only changes.
-  useEffect(() => {
-    const prev = prevModeRef.current
-
-    if (prev === null) {
-      if (cellIcons.length === 0) return
-      prevModeRef.current = mode
-      setDisplayedIcons(cellIcons)
-      setEntered(false)
-      // Double rAF: the first frame lets the browser paint the new layers at
-      // their `from` state (scale 0). The second frame flips data-entered so
-      // the `to` state paints a transition. Without both frames, some
-      // browsers collapse the two style changes into one recalc and skip the
-      // transition — which is the shockwave regression the user hit.
-      enterRafRef.current = requestAnimationFrame(() => {
-        enterRafRef.current = requestAnimationFrame(() => setEntered(true))
-      })
-      return
-    }
-
-    if (prev === mode) {
-      if (cellIcons !== displayedIcons) setDisplayedIcons(cellIcons)
-      return
-    }
-
-    prevModeRef.current = mode
-    setExiting(true)
-    setEntered(false)
-  }, [mode, cellIcons, displayedIcons])
-
-  // Exit completion via `transitionend` — no setTimeout. During
-  // `data-phase="exiting"`, all .layer elements transition `transform`
-  // uniformly; the first `transform` transitionend bubbled up means the
-  // exit has finished.
-  //
-  // IMPORTANT: cleanup only removes the transitionend listener. It does
-  // NOT cancel `enterRafRef` — that rAF is scheduled inside the handler
-  // AFTER setExiting(false), and the cleanup runs in the SAME commit as
-  // that state change. Cancelling it here would prevent `setEntered(true)`
-  // from ever running on subsequent cycles → cells stuck at scale(0).
-  useEffect(() => {
-    if (!exiting) return
-    const el = gridRef.current
-    if (!el) return
-
-    const onEnd = (e: TransitionEvent) => {
-      if (e.propertyName !== 'transform') return
-      setDisplayedIcons(latestIconsRef.current)
-      setExiting(false)
-      // Double rAF: the first frame lets the browser paint the new layers at
-      // their `from` state (scale 0). The second frame flips data-entered so
-      // the `to` state paints a transition. Without both frames, some
-      // browsers collapse the two style changes into one recalc and skip the
-      // transition — which is the shockwave regression the user hit.
-      enterRafRef.current = requestAnimationFrame(() => {
-        enterRafRef.current = requestAnimationFrame(() => setEntered(true))
-      })
-    }
-    el.addEventListener('transitionend', onEnd, { once: true })
-    return () => el.removeEventListener('transitionend', onEnd)
-  }, [exiting])
+  // Pro-level state machine for the swap cycle — see useSwapCycle.ts for
+  // the full reducer logic. Eliminates the old rAF/data-entered race by
+  // relying on CSS @starting-style to auto-animate fresh layer mounts.
+  const { phase: swapPhase, displayedIcons } = useSwapCycle(mode, cellIcons, gridRef)
+  const exiting = swapPhase === 'exiting'
 
   const cellIconsRef = useRef(displayedIcons)
   cellIconsRef.current = displayedIcons
@@ -192,10 +137,16 @@ export function Grid() {
     setFocusIdx(null)
   }, [])
 
+  const toggleConfig = useCallback(() => setConfigOpen((v) => !v), [])
   useGlobalKeys({
-    onToggleConfig: useCallback(() => setConfigOpen((v) => !v), []),
+    onToggleConfig: toggleConfig,
     onEscape: resetContext,
   })
+
+  // Mobile: shake the device to open the secret controls. On iOS Safari
+  // this prompts for motion permission on first tap.
+  const openConfig = useCallback(() => setConfigOpen(true), [])
+  useShake(openConfig)
 
   const handleQueryChange = useCallback((v: string) => {
     setQuery(v)
@@ -213,19 +164,42 @@ export function Grid() {
       />
     )
     const meta = [icon.pack, ...icon.tags.slice(0, 3)].filter(Boolean).join(' · ')
+    const sourceUrl = iconSourceUrl(icon)
 
-    if (!navigator.clipboard?.writeText) {
-      toast.error('clipboard unavailable', { icon: preview, description: icon.name })
+    const onSuccess = () =>
+      toast(icon.name.replace(/-/g, ' '), {
+        icon: preview,
+        description: meta,
+        action: {
+          label: 'source',
+          onClick: () => window.open(sourceUrl, '_blank', 'noopener,noreferrer'),
+        },
+      })
+    const onFailure = () =>
+      toast.error('copy failed', { icon: preview, description: icon.name })
+
+    // Prefer the richer async ClipboardItem API — it auto-prompts for
+    // permission on capable browsers and publishes both plain text (raw
+    // SVG source) and image/svg+xml so paste targets that understand
+    // image data get the picture, not just the markup.
+    const cb = navigator.clipboard
+    if (cb && typeof window.ClipboardItem === 'function' && typeof cb.write === 'function') {
+      const payload = new window.ClipboardItem({
+        'text/plain': new Blob([icon.svg], { type: 'text/plain' }),
+        'image/svg+xml': new Blob([icon.svg], { type: 'image/svg+xml' }),
+      })
+      cb.write([payload]).then(onSuccess, () => {
+        // Fall back to writeText if the browser rejected the richer item.
+        if (cb.writeText) cb.writeText(icon.svg).then(onSuccess, onFailure)
+        else onFailure()
+      })
       return
     }
-    navigator.clipboard.writeText(icon.svg).then(
-      () =>
-        toast(icon.name.replace(/-/g, ' '), {
-          icon: preview,
-          description: meta,
-        }),
-      () => toast.error('copy failed', { icon: preview, description: icon.name }),
-    )
+    if (cb?.writeText) {
+      cb.writeText(icon.svg).then(onSuccess, onFailure)
+      return
+    }
+    toast.error('clipboard unavailable', { icon: preview, description: icon.name })
   }, [])
 
   const handleFocusIcon = useCallback((icon: Icon, _el?: HTMLButtonElement) => {
@@ -257,10 +231,9 @@ export function Grid() {
 
       <div
         ref={gridRef}
-        className={`${styles.grid} w-full h-full`}
+        className="grid [grid-template-columns:repeat(var(--cols),var(--cell))] [grid-template-rows:repeat(var(--rows),var(--cell))] justify-center content-center [column-gap:var(--gap)] [row-gap:var(--gap)] w-full h-full"
         style={gridStyle}
         data-phase={exiting ? 'exiting' : 'idle'}
-        data-entered={entered || undefined}
         data-hide-until-hover={
           // Hide cells behind hover-reveal either when the user opts into
           // that mode via config (and isn't searching), OR whenever a
@@ -293,7 +266,7 @@ export function Grid() {
       </div>
 
       <Toaster
-        position="bottom-center"
+        position="top-center"
         closeButton
         theme="dark"
         toastOptions={{
@@ -302,8 +275,10 @@ export function Grid() {
             toast:
               'flex items-center gap-3 bg-bg border border-faint text-fg px-3 py-2 rounded-none text-[11px] uppercase tracking-[0.06em] shadow-none',
             description: 'text-dim text-[10px] normal-case tracking-[0.04em]',
+            actionButton:
+              'superellipse bg-transparent border border-faint text-fg px-2 py-1 text-[10px] uppercase tracking-[0.06em] cursor-pointer transition-colors hover:[border-color:var(--fg)]',
             closeButton:
-              'bg-transparent border border-faint text-dim hover:text-fg hover:[border-color:var(--outline)] focus-visible:outline-2 focus-visible:outline-dashed focus-visible:[outline-color:var(--outline)]',
+              'superellipse bg-transparent border border-faint text-dim hover:text-fg hover:[border-color:var(--fg)]',
           },
         }}
       />

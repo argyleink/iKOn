@@ -1,58 +1,54 @@
-/* All easings are open-props. Spring goes on every transform so press,
-   release, hover, and the shockwave enter all feel physically consistent —
-   a single easing identity for the whole grid. Opacity stays on ease-out-3
-   (no bounce for fades). */
+/* Layer enter animation is driven by CSS @starting-style: each fresh
+   mount starts at scale(0) and transitions to scale(var(--enter-scale))
+   automatically, per the transition rule on .layer. This removes the
+   old `data-entered` + double-rAF race (fast typing could leave layers
+   stuck at scale 0 with no transition to fire). Exit is still driven by
+   a `data-phase="exiting"` attribute on the grid wrapper. */
 
 .cell {
   transition-duration: 420ms, 200ms;
   transition-timing-function: var(--spring), var(--ease-out-3);
 }
 
-/* --- Layer: resting state is scale(0) opacity(0) until data-entered --- */
 .layer {
-  transform: scale(0);
-  opacity: 0;
+  transform: scale(var(--enter-scale, 1));
+  opacity: var(--alpha, 1);
   transform-origin: 50% 50%;
-  transition-property: transform, opacity;
-  transition-duration: var(--swap-in, 720ms);
-  transition-timing-function: var(--spring), var(--ease-out-3);
+  transition: transform var(--swap-in, 720ms) var(--spring);
   transition-delay: var(--d, 0ms);
 }
 
-/* Entered: springs out to resting with per-cell radial stagger. */
-[data-entered] .layer {
-  transform: scale(1);
-  opacity: var(--alpha, 1);
+/* Fresh mount: start from scale(0); transition above carries it to rest. */
+@starting-style {
+  .layer {
+    transform: scale(0);
+  }
 }
 
-/* Exit: uniform scale-out. Linear-ish ease-out, not spring (no bounce
-   during exit — we want icons to cleanly disappear). */
+/* Exit phase: uniform scale-out using open-props --ease-3. */
 [data-phase="exiting"] .layer {
   transform: scale(0) !important;
-  opacity: 0 !important;
-  transition-duration: var(--swap-out, 460ms) !important;
-  transition-timing-function: var(--ease-out-3) !important;
+  transition-duration: var(--swap-out, 350ms) !important;
+  transition-timing-function: var(--ease-3) !important;
   transition-delay: 0s !important;
 }
 
-/* Hover/focus: scale up with the base spring — inherits the 720ms spring
-   duration so it bounces up and settles (no hard-snap). Only delay is
-   reset so distant cells don't wait. */
+/* Hover/focus: scale up 15% over resting + full opacity. */
 .cell:hover:not([data-empty]) .layer,
 .cell:focus-visible .layer {
-  transform: scale(1.15);
+  transform: scale(calc(var(--enter-scale, 1) * 1.15));
   opacity: 1;
+  transition: transform 120ms var(--ease-out-3), opacity 120ms var(--ease-out-3);
   transition-delay: 0s;
 }
 
-/* Active (click): scale down with the same spring, symmetrical on release
-   (which falls back to base / hover rule — both use spring too). */
+/* Active (click): scale down 15% from resting. */
 .cell:active:not([data-empty]) .layer {
-  transform: scale(0.85);
+  transform: scale(calc(var(--enter-scale, 1) * 0.85));
   transition-delay: 0s;
 }
 
-/* hide-until-hover mode: cells are invisible until hovered. */
+/* hide-until-hover mode: cells invisible until hovered. */
 [data-hide-until-hover] .layer {
   opacity: 0 !important;
 }
@@ -61,7 +57,6 @@
   opacity: 1 !important;
 }
 
-/* SVG */
 .layer svg {
   width: 100%;
   height: 100%;
@@ -82,21 +77,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .layer {
-    transform: none;
-    transition: opacity 240ms var(--ease-in-out-4);
-    transition-delay: var(--d, 0ms);
-  }
-  [data-entered] .layer {
-    opacity: var(--alpha, 1);
-  }
+  .layer,
+  .cell:hover:not([data-empty]) .layer,
+  .cell:focus-visible .layer,
+  .cell:active:not([data-empty]) .layer,
   [data-phase="exiting"] .layer {
-    opacity: 0 !important;
-    transition-duration: var(--swap-out, 460ms) !important;
-    transition-delay: 0s !important;
+    transform: none !important;
+    transition: none !important;
   }
   .layer svg {
-    stroke-width: 1.75;
     transition: none;
   }
 }

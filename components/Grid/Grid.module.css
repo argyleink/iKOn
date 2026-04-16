@@ -1,9 +1,0 @@
-.grid {
-  display: grid;
-  grid-template-columns: repeat(var(--cols), var(--cell));
-  grid-template-rows: repeat(var(--rows), var(--cell));
-  justify-content: center;
-  align-content: center;
-  column-gap: var(--gap);
-  row-gap: var(--gap);
-}

@@ -35,6 +35,11 @@ function buildGeometry(
       d: `${Math.round(dist * ringStepMs)}ms`,
       stroke: (1.1 + weight * 1.3).toFixed(2),
       alpha: (0.15 + weight * 0.85).toFixed(3),
+      // Tabindex by distance: cells start at 3 so the search input
+      // (tabindex=1) and nearby buttons (chip / clear, tabindex=2) are
+      // reachable from the input before the grid cells. Center = 3,
+      // next ring = 4, etc.
+      tab: Math.round(dist) + 3,
     }
   }
   return geo
@@ -59,9 +64,13 @@ export function GridCells({
     <>
       {cellIcons.map((icon, i) => {
         if (blocked?.has(i)) return null
-        return (
-          <Cell key={i} icon={icon} geometry={geo[i]} onCopy={onCopy} onFocusIcon={onFocusIcon} />
-        )
+        // Guard: during a resize, metrics (and therefore `geo`) can update
+        // in the same render where `cellIcons` is still the pre-resize
+        // length. Skip cells whose geometry slot hasn't been materialized
+        // yet — React will reconcile on the next commit.
+        const g = geo[i]
+        if (!g) return null
+        return <Cell key={i} icon={icon} geometry={g} onCopy={onCopy} onFocusIcon={onFocusIcon} />
       })}
     </>
   )
