@@ -7,6 +7,7 @@ import { Config, type ConfigValues, DEFAULT_CONFIG, INITIAL_VARS, applyConfig } 
 import { SearchInput } from '../SearchInput'
 import styles from './Grid.module.css'
 import { GridCells } from './GridCells'
+import { Loader } from './Loader'
 import { type Mode, useCellAssembly } from './hooks/useCellAssembly'
 import { useGlobalKeys } from './hooks/useGlobalKeys'
 import { useGridMetrics } from './hooks/useGridMetrics'
@@ -98,7 +99,11 @@ export function Grid() {
    * (via displayedIcons) while the new set waits. When exit completes,
    * displayedIcons flips to the already-computed new icons in the same
    * commit = zero dead time between exit and enter. */
-  const { reservation, origin, cellIcons, maxDist } = useCellAssembly(db, metrics, mode)
+  const { reservation, origin, cellIcons, resultCount, maxDist } = useCellAssembly(
+    db,
+    metrics,
+    mode,
+  )
 
   const [displayedIcons, setDisplayedIcons] = useState<(Icon | null)[]>([])
   const [exiting, setExiting] = useState(false)
@@ -112,50 +117,71 @@ export function Grid() {
   const prevModeRef = useRef<Mode | null>(null)
   const latestIconsRef = useRef(cellIcons)
   latestIconsRef.current = cellIcons
-  const exitTimerRef = useRef<number | null>(null)
   const enterRafRef = useRef(0)
+  const gridRef = useRef<HTMLDivElement | null>(null)
 
+  // Mode-change controller: kicks off exit, commits entry on first
+  // render with data, or silently syncs on layout-only changes.
   useEffect(() => {
     const prev = prevModeRef.current
 
-    // First render with data — apply immediately, trigger enter.
     if (prev === null) {
       if (cellIcons.length === 0) return
       prevModeRef.current = mode
       setDisplayedIcons(cellIcons)
       setEntered(false)
-      enterRafRef.current = requestAnimationFrame(() => setEntered(true))
+      // Double rAF: the first frame lets the browser paint the new layers at
+      // their `from` state (scale 0). The second frame flips data-entered so
+      // the `to` state paints a transition. Without both frames, some
+      // browsers collapse the two style changes into one recalc and skip the
+      // transition — which is the shockwave regression the user hit.
+      enterRafRef.current = requestAnimationFrame(() => {
+        enterRafRef.current = requestAnimationFrame(() => setEntered(true))
+      })
       return
     }
 
-    // Layout/resize only — sync in place, no animation.
     if (prev === mode) {
       if (cellIcons !== displayedIcons) setDisplayedIcons(cellIcons)
       return
     }
 
-    // Mode changed — exit then enter.
     prevModeRef.current = mode
     setExiting(true)
     setEntered(false)
+  }, [mode, cellIcons, displayedIcons])
 
-    if (exitTimerRef.current !== null) window.clearTimeout(exitTimerRef.current)
-    exitTimerRef.current = window.setTimeout(() => {
-      exitTimerRef.current = null
+  // Exit completion via `transitionend` — no setTimeout. During
+  // `data-phase="exiting"`, all .layer elements transition `transform`
+  // uniformly; the first `transform` transitionend bubbled up means the
+  // exit has finished.
+  //
+  // IMPORTANT: cleanup only removes the transitionend listener. It does
+  // NOT cancel `enterRafRef` — that rAF is scheduled inside the handler
+  // AFTER setExiting(false), and the cleanup runs in the SAME commit as
+  // that state change. Cancelling it here would prevent `setEntered(true)`
+  // from ever running on subsequent cycles → cells stuck at scale(0).
+  useEffect(() => {
+    if (!exiting) return
+    const el = gridRef.current
+    if (!el) return
+
+    const onEnd = (e: TransitionEvent) => {
+      if (e.propertyName !== 'transform') return
       setDisplayedIcons(latestIconsRef.current)
       setExiting(false)
-      // Schedule enter for the next frame so the browser sees scale(0) first.
-      enterRafRef.current = requestAnimationFrame(() => setEntered(true))
-    }, config.swapOutMs)
-
-    return () => {
-      if (exitTimerRef.current !== null) {
-        window.clearTimeout(exitTimerRef.current)
-        exitTimerRef.current = null
-      }
-      cancelAnimationFrame(enterRafRef.current)
+      // Double rAF: the first frame lets the browser paint the new layers at
+      // their `from` state (scale 0). The second frame flips data-entered so
+      // the `to` state paints a transition. Without both frames, some
+      // browsers collapse the two style changes into one recalc and skip the
+      // transition — which is the shockwave regression the user hit.
+      enterRafRef.current = requestAnimationFrame(() => {
+        enterRafRef.current = requestAnimationFrame(() => setEntered(true))
+      })
     }
-  }, [mode, cellIcons, displayedIcons, config.swapOutMs])
+    el.addEventListener('transitionend', onEnd, { once: true })
+    return () => el.removeEventListener('transitionend', onEnd)
+  }, [exiting])
 
   const cellIconsRef = useRef(displayedIcons)
   cellIconsRef.current = displayedIcons
@@ -173,10 +199,10 @@ export function Grid() {
 
   const handleQueryChange = useCallback((v: string) => {
     setQuery(v)
-    if (v.trim()) {
-      setFocusIcon(null)
-      setFocusIdx(null)
-    }
+    // Always clear focus on user-typed input — typing is exploration, a
+    // prior focus context from a double-click should not linger.
+    setFocusIcon(null)
+    setFocusIdx(null)
   }, [])
 
   const handleCopy = useCallback((icon: Icon, _el: HTMLButtonElement) => {
@@ -224,21 +250,28 @@ export function Grid() {
   return (
     <main
       ref={mainRef}
-      className="h-dvh overflow-hidden bg-bg text-fg font-mono"
+      className="h-dvh overflow-hidden bg-bg text-fg"
       style={INITIAL_VARS as React.CSSProperties}
     >
-      {!db ? (
-        <div className="absolute inset-0 grid place-items-center text-dim text-[11px]">
-          loading icons…
-        </div>
-      ) : null}
+      {!db ? <Loader /> : null}
 
       <div
+        ref={gridRef}
         className={`${styles.grid} w-full h-full`}
         style={gridStyle}
         data-phase={exiting ? 'exiting' : 'idle'}
         data-entered={entered || undefined}
-        data-hide-until-hover={config.hideUntilHover && query.trim() === '' ? true : undefined}
+        data-hide-until-hover={
+          // Hide cells behind hover-reveal either when the user opts into
+          // that mode via config (and isn't searching), OR whenever a
+          // search yields zero matches — the grid is filled with filler
+          // icons so it still looks alive, but they're only revealed when
+          // the user hovers.
+          (config.hideUntilHover && query.trim() === '') ||
+          (mode.kind === 'search' && resultCount === 0)
+            ? true
+            : undefined
+        }
       >
         <GridCells
           cellIcons={displayedIcons}
