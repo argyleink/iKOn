@@ -2,56 +2,6 @@
 
 :root {
   color-scheme: dark;
-
-  --bg: #000;
-  --fg: #fff;
-  --dim: color-mix(in oklab, var(--fg) 42%, transparent);
-  --faint: color-mix(in oklab, var(--fg) 10%, transparent);
-  --accent: #ff6a1a;
-
-  --cell: 48px;
-  --gap: 1px;
-
-  --swap-in: 720ms;
-  --swap-out: 460ms;
-  --wave-offset: 260ms;
-
-  --spring: linear(
-    0,
-    0.002,
-    0.012 2%,
-    0.055,
-    0.142 8%,
-    0.287,
-    0.486 16%,
-    0.72,
-    0.952 24%,
-    1.13,
-    1.221 32%,
-    1.22,
-    1.158 38%,
-    1.055,
-    0.956 48%,
-    0.912,
-    0.928 58%,
-    0.988 65%,
-    1.045 72%,
-    1.055 78%,
-    1.028 85%,
-    0.996 91%,
-    1
-  );
-
-  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --ease-fun: cubic-bezier(0.76, 0, 0.24, 1);
-
-  /* Unregistered custom properties: CSS treats them as strings, so transitions
-     between values are discrete jumps (no interpolation). The Rainbow client
-     advances these on real events — --selection on each new non-empty text
-     selection, --outline on each new focus change. --caret is NOT here; it
-     lives local to the search input. */
-  --selection: color(display-p3 0.2 1 0.6);
-  --outline: color(display-p3 1 0.1 0.45);
 }
 
 @theme inline {
@@ -74,8 +24,7 @@
 html,
 body {
   height: 100dvh;
-  background: var(--bg);
-  color: var(--fg);
+  margin: 0;
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.02em;
@@ -93,16 +42,6 @@ body {
   color: var(--bg);
 }
 
-/* caret-color is set locally on the search input (see SearchInput.tsx);
-   other inputs/textareas inherit the system caret. */
-
 button {
   -webkit-tap-highlight-color: transparent;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --spring: linear(0, 1);
-    --wave-offset: 0ms;
-  }
 }
