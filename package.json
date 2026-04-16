@@ -4,7 +4,7 @@
   "private": true,
   "description": "Icon discovery by association — search and browse icons with shockwave interactions.",
   "engines": {
-    "node": ">=20.11"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "next dev",
@@ -21,14 +21,15 @@
   "dependencies": {
     "next": "16.2.3",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "sonner": "^2.0.7"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@phosphor-icons/core": "^2.1.1",
     "@tailwindcss/postcss": "^4",
     "@testing-library/react": "^16.1.0",
-    "@types/node": "^20",
+    "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^4.3.4",
