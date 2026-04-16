@@ -55,6 +55,14 @@ type State = {
    *  on clearing a zero-result search was actually a 350ms invisible exit
    *  followed by the real enter. */
   prevWasHidden: boolean
+  /** Monotonic counter bumped on every transition INTO exiting or mounting.
+   *  Used as an effect dep so that React batches which collapse two
+   *  consecutive phase transitions (e.g. MOUNT_COMPLETE→idle plus a
+   *  skip-exit→mounting that arrive in the same microtask) still re-run
+   *  the phase effects. Without this, the intermediate 'idle' state is
+   *  never rendered, the effect sees 'mounting'→'mounting', and the 2-rAF
+   *  MOUNT_COMPLETE scheduler never fires for the new cycle. */
+  phaseTick: number
 }
 
 type Action =
@@ -63,6 +71,8 @@ type Action =
   | { type: 'MOUNT_COMPLETE' }
 
 function reducer(state: State, action: Action): State {
+  const bump = (phase: Phase): number =>
+    phase === state.phase ? state.phaseTick : state.phaseTick + 1
   switch (action.type) {
     case 'INPUT_CHANGED': {
       const { modeKey: key, cellIcons, hidden } = action
@@ -76,6 +86,7 @@ function reducer(state: State, action: Action): State {
           prevModeKey: key,
           pendingModeKey: null,
           prevWasHidden: hidden,
+          phaseTick: bump('mounting'),
         }
       }
 
@@ -116,6 +127,7 @@ function reducer(state: State, action: Action): State {
           prevModeKey: key,
           pendingModeKey: null,
           prevWasHidden: hidden,
+          phaseTick: bump('mounting'),
         }
       }
 
@@ -125,6 +137,7 @@ function reducer(state: State, action: Action): State {
         prevModeKey: key,
         pendingModeKey: null,
         prevWasHidden: hidden,
+        phaseTick: bump('exiting'),
       }
     }
     case 'EXIT_COMPLETE':
@@ -132,6 +145,7 @@ function reducer(state: State, action: Action): State {
         ...state,
         phase: 'mounting',
         displayedIcons: action.cellIcons,
+        phaseTick: bump('mounting'),
       }
     case 'MOUNT_COMPLETE':
       // If input arrived during mounting, flush it into a new exit cycle.
@@ -141,9 +155,10 @@ function reducer(state: State, action: Action): State {
           phase: 'exiting',
           prevModeKey: state.pendingModeKey,
           pendingModeKey: null,
+          phaseTick: bump('exiting'),
         }
       }
-      return { ...state, phase: 'idle' }
+      return { ...state, phase: 'idle', phaseTick: bump('idle') }
   }
 }
 
@@ -153,6 +168,7 @@ const initialState: State = {
   prevModeKey: null,
   pendingModeKey: null,
   prevWasHidden: false,
+  phaseTick: 0,
 }
 
 export function useSwapCycle(
@@ -172,20 +188,37 @@ export function useSwapCycle(
     dispatch({ type: 'INPUT_CHANGED', modeKey: key, cellIcons, hidden: iconsHidden })
   }, [key, cellIcons, iconsHidden])
 
-  // Exit completion via transitionend on transform.
+  // Exit completion: normally fires on the transform transitionend, but if
+  // the prior exit interrupted a barely-started mount, the layers are already
+  // at scale(0) when [data-phase="exiting"] re-applies — that's a no-op in
+  // the browser (no value change → no transition → no transitionend). A
+  // safety timeout guarantees the state machine always progresses: whichever
+  // of the two completes first wins.
   useEffect(() => {
     if (state.phase !== 'exiting') return
     const el = gridRef.current
     if (!el) return
 
-    const onEnd = (e: TransitionEvent) => {
-      if (e.propertyName !== 'transform') return
+    let timeoutId: number | null = null
+    const complete = () => {
+      if (timeoutId !== null) window.clearTimeout(timeoutId)
+      timeoutId = null
       el.removeEventListener('transitionend', onEnd)
       dispatch({ type: 'EXIT_COMPLETE', cellIcons: latestIconsRef.current })
     }
+    const onEnd = (e: TransitionEvent) => {
+      if (e.propertyName !== 'transform') return
+      complete()
+    }
     el.addEventListener('transitionend', onEnd)
-    return () => el.removeEventListener('transitionend', onEnd)
-  }, [state.phase, gridRef])
+    // 500ms = ~350ms --swap-out duration + buffer. If transitionend never
+    // fires (the scale(0)→scale(0) no-op case), this forces progress.
+    timeoutId = window.setTimeout(complete, 500)
+    return () => {
+      if (timeoutId !== null) window.clearTimeout(timeoutId)
+      el.removeEventListener('transitionend', onEnd)
+    }
+  }, [state.phase, state.phaseTick, gridRef])
 
   // Mounting buffer — waits 2 frames so newly-mounted layers have a chance
   // to paint at their @starting-style value (scale 0) and kick off their
@@ -203,7 +236,7 @@ export function useSwapCycle(
       cancelAnimationFrame(raf1)
       cancelAnimationFrame(raf2)
     }
-  }, [state.phase])
+  }, [state.phase, state.phaseTick])
 
   return { phase: state.phase, displayedIcons: state.displayedIcons }
 }
