@@ -48,17 +48,24 @@ type State = {
    *  MOUNT_COMPLETE. Stored as a key (not a Mode) for the same reason as
    *  prevModeKey — content equality across reference-fresh rerenders. */
   pendingModeKey: string | null
+  /** Were the currently-displayed icons hidden (opacity:0 via
+   *  [data-hide-until-hover]) at the moment the last mode was committed?
+   *  When true, a subsequent mode change skips the exit phase — there's
+   *  nothing visible to animate out, and the perceived "double render"
+   *  on clearing a zero-result search was actually a 350ms invisible exit
+   *  followed by the real enter. */
+  prevWasHidden: boolean
 }
 
 type Action =
-  | { type: 'INPUT_CHANGED'; modeKey: string; cellIcons: (Icon | null)[] }
+  | { type: 'INPUT_CHANGED'; modeKey: string; cellIcons: (Icon | null)[]; hidden: boolean }
   | { type: 'EXIT_COMPLETE'; cellIcons: (Icon | null)[] }
   | { type: 'MOUNT_COMPLETE' }
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'INPUT_CHANGED': {
-      const { modeKey: key, cellIcons } = action
+      const { modeKey: key, cellIcons, hidden } = action
 
       // First commit — enter without an exit.
       if (state.prevModeKey === null) {
@@ -68,6 +75,7 @@ function reducer(state: State, action: Action): State {
           displayedIcons: cellIcons,
           prevModeKey: key,
           pendingModeKey: null,
+          prevWasHidden: hidden,
         }
       }
 
@@ -76,9 +84,15 @@ function reducer(state: State, action: Action): State {
       // when clearing the search: deferredQuery lags one render behind
       // `query`, so we briefly get two Modes with the same search content
       // but different references. Comparing by key collapses that pair.
+      // `prevWasHidden` is kept in sync here so a later mode change picks
+      // up the latest visibility (e.g. user typed garbage → hidden became
+      // true → next clear should skip exit).
       if (state.prevModeKey === key) {
         if (state.phase === 'idle' && cellIcons !== state.displayedIcons) {
-          return { ...state, displayedIcons: cellIcons }
+          return { ...state, displayedIcons: cellIcons, prevWasHidden: hidden }
+        }
+        if (state.prevWasHidden !== hidden) {
+          return { ...state, prevWasHidden: hidden }
         }
         return state
       }
@@ -90,11 +104,27 @@ function reducer(state: State, action: Action): State {
         // with no transition to fire. Buffer and apply on MOUNT_COMPLETE.
         return { ...state, pendingModeKey: key }
       }
+
+      // Old layers were hidden — no point animating them out. Jump straight
+      // to mounting so the user only sees the enter wave. @starting-style
+      // on .layer will kick in when new icon ids remount the spans.
+      if (state.prevWasHidden) {
+        return {
+          ...state,
+          phase: 'mounting',
+          displayedIcons: cellIcons,
+          prevModeKey: key,
+          pendingModeKey: null,
+          prevWasHidden: hidden,
+        }
+      }
+
       return {
         ...state,
         phase: 'exiting',
         prevModeKey: key,
         pendingModeKey: null,
+        prevWasHidden: hidden,
       }
     }
     case 'EXIT_COMPLETE':
@@ -122,12 +152,14 @@ const initialState: State = {
   displayedIcons: [],
   prevModeKey: null,
   pendingModeKey: null,
+  prevWasHidden: false,
 }
 
 export function useSwapCycle(
   mode: Mode,
   cellIcons: (Icon | null)[],
   gridRef: RefObject<HTMLElement | null>,
+  iconsHidden: boolean,
 ) {
   const [state, dispatch] = useReducer(reducer, initialState)
 
@@ -137,8 +169,8 @@ export function useSwapCycle(
   const key = useMemo(() => modeKey(mode), [mode])
 
   useEffect(() => {
-    dispatch({ type: 'INPUT_CHANGED', modeKey: key, cellIcons })
-  }, [key, cellIcons])
+    dispatch({ type: 'INPUT_CHANGED', modeKey: key, cellIcons, hidden: iconsHidden })
+  }, [key, cellIcons, iconsHidden])
 
   // Exit completion via transitionend on transform.
   useEffect(() => {

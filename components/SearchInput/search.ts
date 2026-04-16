@@ -1,3 +1,18 @@
+/**
+ * Search engine for the icon index. Lives next to SearchInput because the
+ * input is the UI feature that drives it — the grid is downstream,
+ * consuming `searchScored` results to decide which cells to fill.
+ *
+ * Exposes three levels of API:
+ *   - buildDB: one-time index construction over the full icon set
+ *   - searchScored / search: token-prefix scored lookups (LRU cached)
+ *   - neighborsOf / fillTo: fallbacks used when a query has few results,
+ *     so the grid is never sparse
+ *
+ * Pure functions with no React / DOM deps — trivially testable (see
+ * search.test.ts) and safe to call from any runtime.
+ */
+
 import type { Icon } from '@/lib/icons'
 
 export type SearchDB = {

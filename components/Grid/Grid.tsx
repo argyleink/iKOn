@@ -11,6 +11,7 @@ import { type Mode, useCellAssembly } from './hooks/useCellAssembly'
 import { useGlobalKeys } from './hooks/useGlobalKeys'
 import { useGridMetrics } from './hooks/useGridMetrics'
 import { useIconDB } from './hooks/useIconDB'
+import { useSelectionColor } from './hooks/useSelectionColor'
 import { useShake } from './hooks/useShake'
 import { useSwapCycle } from './hooks/useSwapCycle'
 
@@ -48,37 +49,10 @@ export function Grid() {
   }, [config])
 
   // Rotate the text-selection P3 color on each new non-empty selection.
-  // Focus ring color is white now (superellipse .focus-visible), so there's
-  // no more --outline cycling.
-  useEffect(() => {
-    const el = mainRef.current
-    if (!el) return
-    const SEL = [
-      'color(display-p3 1 0.25 0.55)',
-      'color(display-p3 1 0.65 0.1)',
-      'color(display-p3 1 0.95 0.35)',
-      'color(display-p3 0.45 1 0.5)',
-      'color(display-p3 0.15 0.95 0.95)',
-      'color(display-p3 0.35 0.6 1)',
-      'color(display-p3 0.8 0.35 1)',
-      'color(display-p3 1 0.45 0.85)',
-    ]
-    let si = Math.floor(Math.random() * SEL.length)
-    let lastRange = ''
-
-    const onSelection = () => {
-      const sel = window.getSelection()
-      if (!sel) return
-      const key = `${sel.anchorOffset}:${sel.focusOffset}:${sel.toString().length}`
-      if (key === lastRange) return
-      lastRange = key
-      if (sel.toString().length === 0) return
-      si = (si + 1) % SEL.length
-      el.style.setProperty('--selection', SEL[si])
-    }
-    document.addEventListener('selectionchange', onSelection)
-    return () => document.removeEventListener('selectionchange', onSelection)
-  }, [])
+  // The hook writes onto mainRef, so anything under <main> that reads
+  // `var(--selection)` (::selection, the search chip's border+fill) stays
+  // in lockstep via plain CSS inheritance — no prop drilling needed.
+  useSelectionColor(mainRef)
 
   const mode = useMemo<Mode>(() => {
     const q = deferredQuery.trim()
@@ -102,10 +76,17 @@ export function Grid() {
 
   const gridRef = useRef<HTMLDivElement | null>(null)
 
+  // Layers are invisible (opacity:0 forced) when either the hide-until-hover
+  // config mode is on with an empty query, or a search yielded zero hits.
+  // Passed into useSwapCycle so transitioning AWAY from a hidden state can
+  // skip the exit phase — there's nothing visible to animate out.
+  const iconsHidden =
+    (config.hideUntilHover && query.trim() === '') || (mode.kind === 'search' && resultCount === 0)
+
   // Pro-level state machine for the swap cycle — see useSwapCycle.ts for
   // the full reducer logic. Eliminates the old rAF/data-entered race by
   // relying on CSS @starting-style to auto-animate fresh layer mounts.
-  const { phase: swapPhase, displayedIcons } = useSwapCycle(mode, cellIcons, gridRef)
+  const { phase: swapPhase, displayedIcons } = useSwapCycle(mode, cellIcons, gridRef, iconsHidden)
   const exiting = swapPhase === 'exiting'
 
   const cellIconsRef = useRef(displayedIcons)
@@ -138,8 +119,11 @@ export function Grid() {
 
   const handleCopy = useCallback((icon: Icon, _el: HTMLButtonElement) => {
     const preview = (
+      // The span fills its sonner-provided [data-icon] slot (sized in
+      // globals.css). Inner SVG is forced to 100% so glyphs scale with
+      // the slot rather than their intrinsic viewBox size.
       <span
-        className="inline-grid place-items-center w-9 h-9 text-fg [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:fill-none [&>svg[data-pack=phosphor]]:stroke-none [&>svg[data-pack=phosphor]]:fill-current"
+        className="grid place-items-center w-full h-full text-fg [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:fill-none [&>svg[data-pack=phosphor]]:stroke-none [&>svg[data-pack=phosphor]]:fill-current"
         dangerouslySetInnerHTML={{ __html: icon.svg }}
       />
     )
@@ -213,17 +197,11 @@ export function Grid() {
         className="grid [grid-template-columns:repeat(var(--cols),var(--cell))] [grid-template-rows:repeat(var(--rows),var(--cell))] justify-center content-center [column-gap:var(--gap)] [row-gap:var(--gap)] w-full h-full"
         style={gridStyle}
         data-phase={exiting ? 'exiting' : 'idle'}
-        data-hide-until-hover={
-          // Hide cells behind hover-reveal either when the user opts into
-          // that mode via config (and isn't searching), OR whenever a
-          // search yields zero matches — the grid is filled with filler
-          // icons so it still looks alive, but they're only revealed when
-          // the user hovers.
-          (config.hideUntilHover && query.trim() === '') ||
-          (mode.kind === 'search' && resultCount === 0)
-            ? true
-            : undefined
-        }
+        // Hide cells behind hover-reveal either when the user opts into
+        // that mode via config (and isn't searching), OR whenever a search
+        // yields zero matches — the grid is filled with filler icons so it
+        // still looks alive, but they're only revealed when the user hovers.
+        data-hide-until-hover={iconsHidden ? true : undefined}
       >
         <GridCells
           cellIcons={displayedIcons}

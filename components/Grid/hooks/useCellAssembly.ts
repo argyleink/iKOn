@@ -2,8 +2,10 @@
 
 import type { Icon } from '@/lib/icons'
 import { useMemo } from 'react'
+// Search lives with SearchInput (the feature it drives); the grid is a
+// consumer of its results, not its owner.
+import { type SearchDB, fillTo, neighborsOf, searchScored } from '../../SearchInput/search'
 import { type GridMetrics, type Origin, centerOf, radialDistance } from '../metrics'
-import { type SearchDB, fillTo, neighborsOf, searchScored } from '../search'
 
 export type Mode =
   | { kind: 'browse'; focus: Icon | null; originIndex: number | null }

@@ -67,7 +67,10 @@ export function SearchInput({
             onClick={onClear}
             aria-label={`Selected: ${focusedIcon.name.replace(/-/g, ' ')}. Click to clear.`}
             title="selected · click to clear"
-            className={`superellipse flex-none self-center grid place-items-center w-[var(--cell)] h-[var(--cell)] p-1.5 bg-transparent border border-[var(--outline,var(--fg))] text-[var(--outline,var(--fg))] cursor-pointer pointer-events-auto transition-colors duration-150 hover:bg-[var(--outline,var(--fg))] hover:text-bg ${styles.chip}`}
+            // Border + fill track `--selection` so the chip matches whatever
+            // P3 color was last cycled by useSelectionColor. Falls back to
+            // --fg if the variable hasn't been set yet (pre-first-selection).
+            className={`superellipse flex-none self-center grid place-items-center w-[var(--cell)] h-[var(--cell)] p-1.5 bg-transparent border border-[var(--selection,var(--fg))] text-[var(--selection,var(--fg))] cursor-pointer pointer-events-auto transition-colors duration-150 hover:bg-[var(--selection,var(--fg))] hover:text-bg ${styles.chip}`}
           >
             <span
               key={focusedIcon.id}
