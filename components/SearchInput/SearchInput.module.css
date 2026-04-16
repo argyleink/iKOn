@@ -46,10 +46,10 @@
 }
 
 .chip {
-  animation: chip-enter 420ms var(--spring) both;
+  animation: chip-enter 1s var(--spring) both;
 }
 .chipIcon {
-  animation: chip-icon-swap 320ms var(--spring) both;
+  animation: chip-icon-swap 1s var(--spring) both;
 }
 
 @keyframes chip-enter {
