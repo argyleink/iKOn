@@ -11,6 +11,7 @@ import { type Mode, useCellAssembly } from './hooks/useCellAssembly'
 import { useGlobalKeys } from './hooks/useGlobalKeys'
 import { useGridMetrics } from './hooks/useGridMetrics'
 import { useIconDB } from './hooks/useIconDB'
+import { useMediaQuery } from './hooks/useMediaQuery'
 import { useSelectionColor } from './hooks/useSelectionColor'
 import { useShake } from './hooks/useShake'
 import { useSwapCycle } from './hooks/useSwapCycle'
@@ -42,6 +43,7 @@ export function Grid() {
   const [focusIdx, setFocusIdx] = useState<number | null>(null)
 
   const metrics = useGridMetrics(mainRef, config.cellPx)
+  const isNarrow = useMediaQuery('(max-width: 639.98px)')
 
   // Custom props live on the <main> element, not :root.
   useEffect(() => {
@@ -224,7 +226,10 @@ export function Grid() {
       </div>
 
       <Toaster
-        position="top-center"
+        // Desktop: pin toasts at the top so they don't cover grid rows the
+        // user is reading. Mobile: bottom-center — thumb reach + no overlap
+        // with the centered search input. 640px matches Tailwind's `sm`.
+        position={isNarrow ? 'bottom-center' : 'top-center'}
         closeButton
         theme="dark"
         toastOptions={{
