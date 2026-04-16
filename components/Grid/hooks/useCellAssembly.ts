@@ -8,7 +8,7 @@ import { type SearchDB, fillTo, neighborsOf, searchScored } from '../../SearchIn
 import { type GridMetrics, type Origin, centerOf, radialDistance } from '../metrics'
 
 export type Mode =
-  | { kind: 'browse'; focus: Icon | null; originIndex: number | null }
+  | { kind: 'browse'; focus: Icon | null; originIndex: number | null; seed?: string }
   | { kind: 'search'; query: string }
 
 export type Reservation = {
@@ -88,6 +88,9 @@ export function useCellAssembly(db: SearchDB | null, metrics: GridMetrics, mode:
     } else if (mode.focus) {
       primary = neighborsOf(db, mode.focus, rankedAvailable.length)
       seed = `f:${mode.focus.id}`
+    } else if (mode.seed) {
+      primary = []
+      seed = `browse:${mode.seed}`
     } else {
       primary = db.icons.slice(0, rankedAvailable.length)
       seed = 'browse:default'

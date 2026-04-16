@@ -42,6 +42,18 @@ export function Grid() {
   const [focusIcon, setFocusIcon] = useState<Icon | null>(null)
   const [focusIdx, setFocusIdx] = useState<number | null>(null)
 
+  // Rotates per page load and whenever browse mode re-enters from a non-empty
+  // search. Safe across SSR: no icons render until db resolves on the client.
+  const [browseSeed, setBrowseSeed] = useState(() => Math.random().toString(36).slice(2))
+  const prevQueryEmpty = useRef(true)
+  useEffect(() => {
+    const isEmpty = query.trim() === ''
+    if (!prevQueryEmpty.current && isEmpty) {
+      setBrowseSeed(Math.random().toString(36).slice(2))
+    }
+    prevQueryEmpty.current = isEmpty
+  }, [query])
+
   const metrics = useGridMetrics(mainRef, config.cellPx)
   const isNarrow = useMediaQuery('(max-width: 639.98px)')
 
@@ -60,8 +72,8 @@ export function Grid() {
     const q = deferredQuery.trim()
     if (q) return { kind: 'search', query: deferredQuery }
     if (focusIcon) return { kind: 'browse', focus: focusIcon, originIndex: focusIdx }
-    return { kind: 'browse', focus: null, originIndex: null }
-  }, [deferredQuery, focusIcon, focusIdx])
+    return { kind: 'browse', focus: null, originIndex: null, seed: browseSeed }
+  }, [deferredQuery, focusIcon, focusIdx, browseSeed])
 
   /* -------- Always compute with the LIVE mode ----------------------------
    *
