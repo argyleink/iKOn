@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "open-props/easings.min.css";
 
 :root {
   color-scheme: dark;
@@ -10,7 +11,6 @@
   --color-dim: var(--dim);
   --color-faint: var(--faint);
   --color-accent: var(--accent);
-  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
 }
 
 *,
@@ -25,7 +25,7 @@ html,
 body {
   height: 100dvh;
   margin: 0;
-  font-family: var(--font-mono);
+  font-family: system-ui, sans-serif;
   font-size: 12px;
   letter-spacing: 0.02em;
   touch-action: manipulation;
@@ -44,4 +44,25 @@ body {
 
 button {
   -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Crossfade + blur for cycling tips (loader + search input placeholder). */
+@keyframes tip-reveal {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+  }
 }

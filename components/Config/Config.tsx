@@ -11,26 +11,17 @@ export type ConfigValues = {
   swapOutMs: number
   bg: string
   fg: string
-  curve: keyof typeof SPRING_CURVES
+  spring: keyof typeof SPRING_VARS
   hideUntilHover: boolean
 }
 
-export const SPRING_CURVES = {
-  ripple: `linear(
-    0, 0.002, 0.012 2%, 0.055, 0.142 8%, 0.287, 0.486 16%, 0.72, 0.952 24%,
-    1.13, 1.221 32%, 1.22, 1.158 38%, 1.055, 0.956 48%, 0.912, 0.928 58%,
-    0.988 65%, 1.045 72%, 1.055 78%, 1.028 85%, 0.996 91%, 1
-  )`,
-  subtle: `linear(
-    0, 0.009, 0.035 2.1%, 0.141, 0.3 8.1%, 0.516, 0.745 16.4%, 0.87, 0.957,
-    1.015, 1.045, 1.055, 1.051, 1.035, 0.999 38.2%, 0.959, 0.926, 0.908,
-    0.906 49.3%, 0.977 63.2%, 1.002 76.7%, 0.997 95.9%, 1
-  )`,
-  elastic: `linear(
-    0, -0.02 5%, 0.05, 0.2 12%, 0.5, 0.9 25%, 1.25, 1.35 34%, 1.22, 1.05 45%,
-    0.88, 0.85 55%, 0.95 65%, 1.08 74%, 1.05 82%, 0.98 90%, 1
-  )`,
-  snap: 'linear(0, 0.28 12%, 0.72 28%, 1.08 44%, 1.02 60%, 0.99 78%, 1)',
+/** Spring options reference open-props CSS vars (see easings.min.css). */
+export const SPRING_VARS = {
+  'spring 1': 'var(--ease-spring-1)',
+  'spring 2': 'var(--ease-spring-2)',
+  'spring 3': 'var(--ease-spring-3)',
+  'spring 4': 'var(--ease-spring-4)',
+  'spring 5': 'var(--ease-spring-5)',
 } as const
 
 export const DEFAULT_CONFIG: ConfigValues = {
@@ -41,7 +32,7 @@ export const DEFAULT_CONFIG: ConfigValues = {
   swapOutMs: 720,
   bg: '#000000',
   fg: '#ffffff',
-  curve: 'ripple',
+  spring: 'spring 3',
   hideUntilHover: false,
 }
 
@@ -55,9 +46,10 @@ export const INITIAL_VARS: Record<string, string> = {
   '--gap': '1px',
   '--swap-in': '720ms',
   '--swap-out': '720ms',
-  '--spring': SPRING_CURVES.ripple,
-  '--ease-out': 'cubic-bezier(0.2, 0.8, 0.2, 1)',
-  '--ease-fun': 'cubic-bezier(0.76, 0, 0.24, 1)',
+  // `--spring` points at one of open-props's `--ease-spring-*` vars.
+  // CSS files use `var(--spring)` so the user's choice takes effect
+  // without overriding open-props's own definitions.
+  '--spring': 'var(--ease-spring-3)',
   '--selection': 'color(display-p3 0.2 1 0.6)',
   '--outline': 'color(display-p3 1 0.1 0.45)',
 }
@@ -75,8 +67,9 @@ export function applyConfig(cfg: ConfigValues, el: HTMLElement) {
   s.setProperty('--fg', cfg.fg)
   s.setProperty('--dim', `color-mix(in oklab, ${cfg.fg} 42%, transparent)`)
   s.setProperty('--faint', `color-mix(in oklab, ${cfg.fg} 10%, transparent)`)
-  const reduce = reducedMotion?.matches
-  s.setProperty('--spring', reduce ? 'linear(0, 1)' : SPRING_CURVES[cfg.curve])
+  // Never override open-props's own `--ease-spring-*` vars; instead
+  // point the app's `--spring` alias at the user's chosen one.
+  s.setProperty('--spring', reducedMotion?.matches ? 'linear(0, 1)' : SPRING_VARS[cfg.spring])
 }
 
 type Props = {
@@ -162,13 +155,13 @@ export function Config({ open, values, onChange, onClose }: Props) {
         onChange={(v) => set('swapOutMs', v)}
       />
       <Row>
-        <span className="text-dim whitespace-nowrap">spring curve</span>
+        <span className="text-dim whitespace-nowrap">spring</span>
         <select
           className={`col-span-2 bg-transparent border border-faint text-fg py-[3px] px-1.5 font-[inherit] uppercase cursor-pointer focus-visible:outline-2 focus-visible:outline-dashed focus-visible:[outline-color:var(--outline)] focus-visible:outline-offset-2 ${styles.select}`}
-          value={values.curve}
-          onChange={(e) => set('curve', e.target.value as ConfigValues['curve'])}
+          value={values.spring}
+          onChange={(e) => set('spring', e.target.value as ConfigValues['spring'])}
         >
-          {Object.keys(SPRING_CURVES).map((k) => (
+          {Object.keys(SPRING_VARS).map((k) => (
             <option key={k} value={k}>
               {k}
             </option>

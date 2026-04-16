@@ -3,7 +3,7 @@
    ::-webkit-color-swatch. Everything else is utility classes on the JSX. */
 
 .panel {
-  animation: slide-in 260ms var(--ease-out);
+  animation: slide-in 260ms var(--ease-out-3);
 }
 
 @keyframes slide-in {
@@ -46,7 +46,7 @@
   margin-top: -6px;
   background: var(--fg);
   cursor: pointer;
-  transition: background 120ms var(--ease-out);
+  transition: background 120ms var(--ease-out-3);
 }
 
 .range:hover::-webkit-slider-thumb {
