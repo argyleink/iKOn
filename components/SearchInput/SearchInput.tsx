@@ -104,27 +104,35 @@ export function SearchInput({
         />
 
         {hasValue ? (
-          <button
-            type="button"
-            // biome-ignore lint/a11y/noPositiveTabindex: cells use positive tabindex for radial order, the clear button needs to come first
-            tabIndex={2}
-            onClick={handleClear}
-            aria-label="clear search"
-            title="clear"
-            className={`superellipse flex-none self-center grid place-items-center w-[22px] h-[22px] bg-transparent cursor-pointer pointer-events-auto transition-opacity duration-150 hover:opacity-100 focus-visible:opacity-100 ${
-              noResults ? 'text-[color(display-p3_1_0_0)] opacity-100' : 'text-fg opacity-25'
-            }`}
-          >
-            <svg
-              viewBox="0 0 20 20"
-              aria-hidden="true"
-              className="w-full h-full stroke-current fill-none"
-              strokeWidth={1.5}
+          // Absolute-positioned so the input's value can stay truly centered
+          // in the label; the clear button no longer consumes inline flex
+          // space. The wrapper paints a linear-gradient from transparent →
+          // var(--bg) along the inline-start so long queries that overflow
+          // the input visually fade into the button rather than running
+          // into its edge.
+          <span className="absolute inset-y-0 end-2 flex items-center ps-10 pointer-events-none [background:linear-gradient(to_left,var(--bg)_24px,transparent)]">
+            <button
+              type="button"
+              // biome-ignore lint/a11y/noPositiveTabindex: cells use positive tabindex for radial order, the clear button needs to come first
+              tabIndex={2}
+              onClick={handleClear}
+              aria-label="clear search"
+              title="clear"
+              className={`superellipse flex-none grid place-items-center w-[22px] h-[22px] bg-bg cursor-pointer pointer-events-auto transition-opacity duration-150 hover:opacity-100 focus-visible:opacity-100 ${
+                noResults ? 'text-[color(display-p3_1_0_0)] opacity-100' : 'text-fg opacity-25'
+              }`}
             >
-              <circle cx="10" cy="10" r="8.5" />
-              <path d="M 7 7 L 13 13 M 13 7 L 7 13" strokeLinecap="round" />
-            </svg>
-          </button>
+              <svg
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+                className="w-full h-full stroke-current fill-none"
+                strokeWidth={1.5}
+              >
+                <circle cx="10" cy="10" r="8.5" />
+                <path d="M 7 7 L 13 13 M 13 7 L 7 13" strokeLinecap="round" />
+              </svg>
+            </button>
+          </span>
         ) : null}
       </label>
     </search>
