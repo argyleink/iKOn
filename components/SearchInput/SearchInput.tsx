@@ -37,7 +37,7 @@ export function SearchInput({ value, onChange, onClear, focusedIcon = null }: Pr
           </button>
         ) : null}
         <input
-          className={`flex-1 min-w-0 bg-transparent border-0 outline-none text-fg font-[inherit] [font-size:clamp(1.25rem,5vw,3rem)] tracking-[0.04em] uppercase text-center w-full p-0 appearance-none [-webkit-tap-highlight-color:transparent] ${styles.input}`}
+          className={`flex-1 min-w-0 bg-transparent border-0 outline-none text-fg text-[18px] font-thin tracking-[0.04em] uppercase text-center w-full p-0 appearance-none [-webkit-tap-highlight-color:transparent] ${styles.input}`}
           type="search"
           inputMode="search"
           enterKeyHint="search"
