@@ -28,7 +28,12 @@ export function computeInputSpan(cols: number, cellPx: number): number {
 
 function buildReservation(metrics: GridMetrics): Reservation | null {
   if (metrics.total === 0) return null
-  const span = computeInputSpan(metrics.cols, metrics.cellPx)
+  // The reservation covers the input PLUS one flanking cell on each side so
+  // the chip (selected-icon button) and clear button always have a dedicated
+  // cell-sized slot rather than competing with the input's inline space.
+  // This keeps the input visually centered and lets text run edge-to-edge.
+  const inputSpan = computeInputSpan(metrics.cols, metrics.cellPx)
+  const span = Math.min(inputSpan + 2, metrics.cols)
   const row = Math.floor((metrics.rows - 1) / 2)
   const colStart = Math.floor((metrics.cols - span) / 2)
   const blocked = new Set<number>()

@@ -54,11 +54,18 @@ export function SearchInput({
   }
 
   return (
-    <search className="[grid-column:var(--input-col-start)/span_var(--input-col-span)] [grid-row:var(--input-row)/span_1] self-stretch justify-self-stretch flex items-center pointer-events-none relative z-[2]">
-      <label className="relative pointer-events-auto flex items-center justify-center gap-3.5 px-2 w-full">
-        <span id={labelId} className="sr-only">
-          Search icons
-        </span>
+    // Layout: [chip slot: 1 cell] [input: flex-1] [clear slot: 1 cell].
+    // The outer reservation (see buildReservation) always blocks inputSpan+2
+    // cells so both flanking slots are guaranteed to sit over dedicated grid
+    // cells — chip/clear never overlap the input, and the input can run text
+    // edge-to-edge without padding hacks. gap-[var(--gap)] matches the grid's
+    // column-gap so slots visually align with adjacent cells.
+    <search className="[grid-column:var(--input-col-start)/span_var(--input-col-span)] [grid-row:var(--input-row)/span_1] self-stretch justify-self-stretch flex items-stretch gap-[var(--gap)] pointer-events-none relative z-[2]">
+      <span id={labelId} className="sr-only">
+        Search icons
+      </span>
+
+      <div className="w-[var(--cell)] flex items-center justify-center pointer-events-auto">
         {focusedIcon ? (
           <button
             type="button"
@@ -70,7 +77,7 @@ export function SearchInput({
             // Icon fill tracks `--selection` so the chip matches whatever
             // P3 color was last cycled by useSelectionColor. Falls back to
             // --fg if the variable hasn't been set yet (pre-first-selection).
-            className={`superellipse flex-none self-center grid place-items-center w-[var(--cell)] h-[var(--cell)] p-1.5 bg-transparent text-[var(--selection,var(--fg))] cursor-pointer pointer-events-auto transition-colors duration-150 hover:bg-[var(--selection,var(--fg))] hover:text-bg ${styles.chip}`}
+            className={`superellipse grid place-items-center w-[var(--cell)] h-[var(--cell)] p-1.5 bg-transparent text-[var(--selection,var(--fg))] cursor-pointer transition-colors duration-150 hover:bg-[var(--selection,var(--fg))] hover:text-bg ${styles.chip}`}
           >
             <span
               key={focusedIcon.id}
@@ -80,64 +87,58 @@ export function SearchInput({
             />
           </button>
         ) : null}
+      </div>
 
-        <input
-          ref={inputRef}
-          // biome-ignore lint/a11y/noPositiveTabindex: cells use positive tabindex for radial order, the input must come first
-          tabIndex={1}
-          className={`flex-1 min-w-0 bg-transparent border-0 outline-none text-fg text-[18px] font-thin tracking-[0.04em] uppercase text-center p-0 appearance-none [-webkit-tap-highlight-color:transparent] placeholder:text-dim placeholder:opacity-100 placeholder:lowercase placeholder:tracking-[0.04em] ${styles.input}`}
-          type="search"
-          inputMode="search"
-          enterKeyHint="search"
-          value={value}
-          spellCheck={false}
-          autoCapitalize="off"
-          autoCorrect="off"
-          autoComplete="off"
-          placeholder={showTips ? tip : ''}
-          // biome-ignore lint/a11y/noAutofocus: primary interaction of the app.
-          autoFocus
-          aria-labelledby={labelId}
-          onInput={resetIdle}
-          onFocus={resetIdle}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') onClear()
-          }}
-        />
+      <input
+        ref={inputRef}
+        // biome-ignore lint/a11y/noPositiveTabindex: cells use positive tabindex for radial order, the input must come first
+        tabIndex={1}
+        className={`flex-1 min-w-0 bg-transparent border-0 outline-none text-fg text-[18px] font-thin tracking-[0.04em] uppercase text-center p-0 appearance-none [-webkit-tap-highlight-color:transparent] placeholder:text-dim placeholder:opacity-100 placeholder:lowercase placeholder:tracking-[0.04em] pointer-events-auto ${styles.input}`}
+        type="search"
+        inputMode="search"
+        enterKeyHint="search"
+        value={value}
+        spellCheck={false}
+        autoCapitalize="off"
+        autoCorrect="off"
+        autoComplete="off"
+        placeholder={showTips ? tip : ''}
+        // biome-ignore lint/a11y/noAutofocus: primary interaction of the app.
+        autoFocus
+        aria-labelledby={labelId}
+        onInput={resetIdle}
+        onFocus={resetIdle}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClear()
+        }}
+      />
 
+      <div className="w-[var(--cell)] flex items-center justify-center pointer-events-auto">
         {hasValue ? (
-          // Absolute-positioned so the input's value can stay truly centered
-          // in the label; the clear button no longer consumes inline flex
-          // space. The wrapper paints a linear-gradient from transparent →
-          // var(--bg) along the inline-start so long queries that overflow
-          // the input visually fade into the button rather than running
-          // into its edge.
-          <span className="absolute inset-y-0 end-2 flex items-center ps-10 pointer-events-none [background:linear-gradient(to_left,var(--bg)_24px,transparent)]">
-            <button
-              type="button"
-              // biome-ignore lint/a11y/noPositiveTabindex: cells use positive tabindex for radial order, the clear button needs to come first
-              tabIndex={2}
-              onClick={handleClear}
-              aria-label="clear search"
-              title="clear"
-              className={`superellipse flex-none grid place-items-center w-[22px] h-[22px] bg-bg cursor-pointer pointer-events-auto transition-opacity duration-150 hover:opacity-100 focus-visible:opacity-100 ${
-                noResults ? 'text-[color(display-p3_1_0_0)] opacity-100' : 'text-fg opacity-25'
-              }`}
+          <button
+            type="button"
+            // biome-ignore lint/a11y/noPositiveTabindex: cells use positive tabindex for radial order, the clear button needs to come first
+            tabIndex={2}
+            onClick={handleClear}
+            aria-label="clear search"
+            title="clear"
+            className={`superellipse grid place-items-center w-[22px] h-[22px] bg-bg cursor-pointer transition-opacity duration-150 hover:opacity-100 focus-visible:opacity-100 ${
+              noResults ? 'text-[color(display-p3_1_0_0)] opacity-100' : 'text-fg opacity-25'
+            }`}
+          >
+            <svg
+              viewBox="0 0 20 20"
+              aria-hidden="true"
+              className="w-full h-full stroke-current fill-none"
+              strokeWidth={1.5}
             >
-              <svg
-                viewBox="0 0 20 20"
-                aria-hidden="true"
-                className="w-full h-full stroke-current fill-none"
-                strokeWidth={1.5}
-              >
-                <circle cx="10" cy="10" r="8.5" />
-                <path d="M 7 7 L 13 13 M 13 7 L 7 13" strokeLinecap="round" />
-              </svg>
-            </button>
-          </span>
+              <circle cx="10" cy="10" r="8.5" />
+              <path d="M 7 7 L 13 13 M 13 7 L 7 13" strokeLinecap="round" />
+            </svg>
+          </button>
         ) : null}
-      </label>
+      </div>
     </search>
   )
 }
