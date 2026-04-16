@@ -1,6 +1,6 @@
 'use client'
 
-import { type GridMetrics, type Origin, centerOf, indexToColRow, radialDistance } from '@/lib/grid'
+import { type GridMetrics, type Origin, centerOf, radialDistance } from '@/lib/grid'
 import { type SearchDB, fillTo, neighborsOf, searchScored } from '@/lib/search'
 import type { Icon } from '@/lib/types'
 import { useMemo } from 'react'
@@ -48,13 +48,14 @@ function buildReservation(metrics: GridMetrics): Reservation | null {
 export function useCellAssembly(db: SearchDB | null, metrics: GridMetrics, mode: Mode) {
   const reservation = useMemo(() => buildReservation(metrics), [metrics])
 
+  // Placement origin is always grid-center — the enter wave always emanates
+  // from the middle. The double-click-to-focus transient temporarily lets
+  // the EXIT wave emanate from the clicked cell, but that's driven from
+  // Grid.tsx and applied at the GridCells geometry layer, not here.
   const origin = useMemo<Origin>(() => {
     if (metrics.total === 0) return { col: 0, row: 0 }
-    if (mode.kind === 'browse' && mode.originIndex !== null && mode.originIndex >= 0) {
-      return indexToColRow(mode.originIndex, metrics.cols)
-    }
     return centerOf(metrics)
-  }, [mode, metrics])
+  }, [metrics])
 
   const rankedAvailable = useMemo(() => {
     if (metrics.total === 0) return [] as number[]

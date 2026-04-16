@@ -1,6 +1,6 @@
 'use client'
 
-import { useCountUp } from '@/lib/useCountUp'
+import type { Icon } from '@/lib/types'
 import { useId } from 'react'
 import styles from './SearchInput.module.css'
 
@@ -8,34 +8,39 @@ type Props = {
   value: string
   onChange: (v: string) => void
   onClear: () => void
-  count: number
-  total: number
-  packs?: string[]
+  focusedIcon?: Icon | null
 }
-
-const DEFAULT_PACKS = ['Lucide', 'Phosphor', 'Iconoir']
 
 export function SearchInput({
   value,
   onChange,
   onClear,
-  count,
-  total,
-  packs = DEFAULT_PACKS,
+  focusedIcon = null,
 }: Props) {
   const labelId = useId()
-  const hasQuery = value.trim().length > 0
-  const animated = useCountUp(hasQuery ? count : total)
 
   return (
     <search className={styles.wrap}>
-      <label className={styles.field}>
-        <span id={labelId} className={styles.srOnly}>
-          Search to reveal icons — results ripple across the grid, closest matches near the center.
+      <label className="relative pointer-events-auto flex items-center justify-center gap-3.5 px-2 w-full">
+        <span id={labelId} className="sr-only">
+          Search icons
         </span>
-        <span className={styles.prompt} aria-hidden="true">
-          i<span className={styles.kaps}>KO</span>n
-        </span>
+        {focusedIcon ? (
+          <button
+            type="button"
+            className={styles.chip}
+            onClick={onClear}
+            aria-label={`Selected: ${focusedIcon.name.replace(/-/g, ' ')}. Click to clear.`}
+            title="selected · click to clear"
+          >
+            <span
+              key={focusedIcon.id}
+              className={styles.chipIcon}
+              aria-hidden="true"
+              dangerouslySetInnerHTML={{ __html: focusedIcon.svg }}
+            />
+          </button>
+        ) : null}
         <input
           className={styles.input}
           type="search"
@@ -44,57 +49,15 @@ export function SearchInput({
           autoCapitalize="off"
           autoCorrect="off"
           autoComplete="off"
+          placeholder="search icons"
           // biome-ignore lint/a11y/noAutofocus: primary interaction of the app.
           autoFocus
           aria-labelledby={labelId}
-          aria-describedby={`${labelId}-count`}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Escape') onClear()
           }}
         />
-        <span className={styles.countWrap}>
-          <span
-            id={`${labelId}-count`}
-            className={styles.count}
-            // biome-ignore lint/a11y/noNoninteractiveTabindex: reveals tooltip on keyboard focus.
-            tabIndex={0}
-            aria-label={
-              hasQuery
-                ? `${count.toLocaleString()} of ${total.toLocaleString()} matches`
-                : `${total.toLocaleString()} icons loaded`
-            }
-          >
-            {animated.toLocaleString()}
-          </span>
-          <span className={styles.tooltip} role="tooltip">
-            <span className={styles.tHead}>
-              {hasQuery
-                ? `${count.toLocaleString()} of ${total.toLocaleString()} icons`
-                : `${total.toLocaleString()} icons loaded`}
-            </span>
-            <span className={styles.tBody}>
-              Ranked live by blended similarity:
-              <span className={styles.tRow}>
-                <em>name tokens</em>
-                <em className={styles.tWeight}>60%</em>
-              </span>
-              <span className={styles.tRow}>
-                <em>tag overlap</em>
-                <em className={styles.tWeight}>25%</em>
-              </span>
-              <span className={styles.tRow}>
-                <em>category overlap</em>
-                <em className={styles.tWeight}>15%</em>
-              </span>
-              <span className={styles.tRow}>
-                <em>cross-pack bonus</em>
-                <em className={styles.tWeight}>+5%</em>
-              </span>
-            </span>
-            <span className={styles.tFoot}>{packs.join(' · ')}</span>
-          </span>
-        </span>
         <svg
           className={styles.underline}
           viewBox="0 0 100 2"

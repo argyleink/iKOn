@@ -1,54 +1,17 @@
 .cell {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: var(--cell);
-  height: var(--cell);
-  background: transparent;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-  color: var(--fg);
-  user-select: none;
   -webkit-tap-highlight-color: transparent;
-  /* style-only containment so scaled layers can paint past cell bounds
-     (the shockwave expansion relies on this) while React still benefits
-     from the isolation. */
-  contain: style;
-  outline: 0 dashed transparent;
-  transition: outline-offset 420ms var(--spring), outline-color 200ms var(--ease-out);
+  transition-duration: 420ms, 200ms;
+  transition-timing-function: var(--spring), var(--ease-out);
 }
 
 .cell[data-empty] {
   cursor: default;
 }
 
-.cell::before {
-  content: "";
-  position: absolute;
-  inset: 4px;
-  border: 1px solid transparent;
-  transition: border-color 180ms var(--ease-out);
-  pointer-events: none;
-}
-
-.cell:hover:not([data-empty])::before {
-  border-color: var(--faint);
-}
-
-/* --- Springing dashed focus ring --- */
 .cell:focus-visible {
-  outline: 2px dashed var(--caret, var(--accent));
+  outline: 2px dashed var(--outline, var(--accent));
   outline-offset: 6px;
   z-index: 4;
-}
-
-.cell:focus-visible::before {
-  border-color: var(--accent);
-}
-
-.cell[data-focus]::before {
-  border-color: var(--accent);
 }
 
 .cell:hover:not([data-empty]),
@@ -56,99 +19,70 @@
   z-index: 4;
 }
 
-/* --- Shockwave layers --------------------------------------------------
- *
- * Each layer is inserted FRESH on every swap (keyed `in-<id>` / `out-<id>`).
- * The transition's "from" state is declared via @starting-style, which the
- * browser applies the instant the node mounts — no JS staging, no rAF race.
- *
- * Per-cell CSS variables (set imperatively by GridCells on the button):
- *   --d       radial delay:       distance × ring-step
- *   --dx/--dy unit vector from the shockwave origin → this cell
- *   --ocx/--ocy  pixel offset from THIS cell's center → the origin; used as
- *                the ENTER layer's transform-origin so new icons emerge
- *                from the epicenter
- *   --stroke  stroke-width, weighted by distance
- *   --alpha   resting opacity, weighted by distance
- *
- * Timing story:
- *   t = d                      — the EXIT wave reaches this cell; old icon
- *                                gets blown outward along (dx, dy) and
- *                                collapses to scale(0)
- *   t = d + wave-offset        — the ENTER wave reaches this cell; new icon
- *                                emerges from scale(0) at the epicenter and
- *                                rides the ripple curve out to its cell
- * --------------------------------------------------------------------- */
+/* --- Shockwave layer --- */
 
 .layer {
   position: absolute;
   inset: 6px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: currentColor;
   pointer-events: none;
   will-change: transform, opacity;
-  backface-visibility: hidden;
+  transform-origin: 50% 50%;
+  animation: layer-enter var(--swap-in, 720ms) var(--spring)
+    calc(var(--d, 0ms) + var(--wave-offset, 260ms)) both;
+  transition: opacity 480ms var(--ease-out);
 }
 
-/* ENTER: emerges from the epicenter (transform-origin offset to origin),
-   then rides the spring ripple out to its resting cell position. */
-.layer[data-role="in"] {
-  transform-origin: calc(50% + var(--ocx, 0px)) calc(50% + var(--ocy, 0px));
-  transform: translate3d(0, 0, 0) scale(1);
-  opacity: var(--alpha, 1);
-  transition:
-    transform var(--swap-in, 720ms) var(--spring)
-      calc(var(--d, 0ms) + var(--wave-offset, 260ms)),
-    opacity calc(var(--swap-in, 720ms) * 0.7) var(--ease-out)
-      calc(var(--d, 0ms) + var(--wave-offset, 260ms));
-
-  @starting-style {
-    transform: translate3d(0, 0, 0) scale(0);
+@keyframes layer-enter {
+  from {
+    transform: scale(0);
     opacity: 0;
   }
-}
-
-/* EXIT: the wave passes this cell, pushing the old icon outward along its
-   radial direction and collapsing it to nothing in place. */
-.layer[data-role="out"] {
-  transform-origin: 50% 50%;
-  transform:
-    translate3d(
-      calc(var(--dx, 0) * var(--exit-push, 22px)),
-      calc(var(--dy, 0) * var(--exit-push, 22px)),
-      0
-    )
-    scale(0);
-  opacity: 0;
-  transition:
-    transform var(--swap-out, 520ms) var(--spring-out) var(--d, 0ms),
-    opacity var(--swap-out, 520ms) var(--ease-out) var(--d, 0ms);
-
-  @starting-style {
-    transform: translate3d(0, 0, 0) scale(1);
+  to {
+    transform: scale(1);
     opacity: var(--alpha, 1);
   }
 }
 
-.cell:hover:not([data-empty]) .layer[data-role="in"],
-.cell:focus-visible .layer[data-role="in"] {
-  opacity: 1;
+[data-phase="exiting"] .layer {
+  animation: layer-exit var(--swap-out, 460ms) var(--ease-out) both;
 }
-.cell:hover:not([data-empty]) .layer svg,
-.cell:focus-visible .layer svg {
+
+@keyframes layer-exit {
+  from {
+    transform: scale(1);
+    opacity: var(--alpha, 1);
+  }
+  to {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+.cell:hover:not([data-empty]) .layer,
+.cell:focus-visible .layer {
+  opacity: 1;
+  transition: opacity 120ms var(--ease-out);
+}
+
+.cell:hover:not([data-empty]) .layer .svg,
+.cell:focus-visible .layer .svg {
   stroke-width: 2.25;
 }
 
-.layer svg {
+.svg {
   width: 100%;
   height: 100%;
   stroke: currentColor;
   fill: none;
   stroke-width: var(--stroke, 1.75);
+  transition: stroke-width 120ms var(--ease-out);
 }
 
-.layer svg[data-pack="phosphor"] {
+.svg[data-pack="phosphor"] {
   stroke: none;
   fill: currentColor;
 }
@@ -157,27 +91,25 @@
   .cell {
     transition: outline-offset 220ms var(--ease-fun);
   }
-  .layer[data-role="in"] {
+  .layer {
     transform: none;
-    transition: opacity calc(var(--swap-in, 720ms) * 0.6) var(--ease-fun)
-      calc(var(--d, 0ms) + var(--wave-offset, 260ms));
-    @starting-style {
-      opacity: 0;
-    }
+    animation: layer-enter-reduced calc(var(--swap-in, 720ms) * 0.6) var(--ease-fun)
+      calc(var(--d, 0ms) + var(--wave-offset, 260ms)) both;
+    transition: opacity 240ms var(--ease-fun);
   }
-  .layer[data-role="out"] {
-    transform: none;
-    opacity: 0;
-    transition: opacity var(--swap-out, 520ms) var(--ease-fun) var(--d, 0ms);
-    @starting-style {
-      opacity: var(--alpha, 1);
-    }
+  [data-phase="exiting"] .layer {
+    animation: layer-exit-reduced var(--swap-out, 460ms) var(--ease-fun) both;
   }
-  .layer svg {
+  @keyframes layer-enter-reduced {
+    from { opacity: 0; }
+    to { opacity: var(--alpha, 1); }
+  }
+  @keyframes layer-exit-reduced {
+    from { opacity: var(--alpha, 1); }
+    to { opacity: 0; }
+  }
+  .svg {
     stroke-width: 1.75;
-  }
-  .cell:hover:not([data-empty]) .layer svg,
-  .cell:focus-visible .layer svg {
-    stroke-width: 1.75;
+    transition: none;
   }
 }

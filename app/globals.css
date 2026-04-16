@@ -12,10 +12,8 @@
   --cell: 48px;
   --gap: 1px;
 
-  --ring-step: 38ms;
   --swap-in: 720ms;
   --swap-out: 460ms;
-  --exit-push: 44px;
   --wave-offset: 260ms;
 
   --spring: linear(
@@ -44,16 +42,16 @@
     1
   );
 
-  --spring-out: linear(1, 1.008 4%, 0.992 10%, 0.92 20%, 0.78 35%, 0.52 55%, 0.22 75%, 0.06 90%, 0);
-
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-fun: cubic-bezier(0.76, 0, 0.24, 1);
 
   /* Unregistered custom properties: CSS treats them as strings, so transitions
-     and animations between values are discrete jumps with no interpolation.
-     The Rainbow client sets these on :root at intervals / on selectionchange. */
-  --caret: color(display-p3 1 0.1 0.45);
+     between values are discrete jumps (no interpolation). The Rainbow client
+     advances these on real events — --selection on each new non-empty text
+     selection, --outline on each new focus change. --caret is NOT here; it
+     lives local to the search input. */
   --selection: color(display-p3 0.2 1 0.6);
+  --outline: color(display-p3 1 0.1 0.45);
 }
 
 @theme inline {
@@ -95,10 +93,8 @@ body {
   color: var(--bg);
 }
 
-input,
-textarea {
-  caret-color: var(--caret);
-}
+/* caret-color is set locally on the search input (see SearchInput.tsx);
+   other inputs/textareas inherit the system caret. */
 
 button {
   -webkit-tap-highlight-color: transparent;
@@ -107,8 +103,6 @@ button {
 @media (prefers-reduced-motion: reduce) {
   :root {
     --spring: linear(0, 1);
-    --spring-out: linear(1, 0);
-    --exit-push: 0px;
     --wave-offset: 0ms;
   }
 }

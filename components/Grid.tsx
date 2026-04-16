@@ -6,10 +6,11 @@ import { useGridMetrics } from '@/lib/hooks/useGridMetrics'
 import { useIconDB } from '@/lib/hooks/useIconDB'
 import { useToasts } from '@/lib/hooks/useToasts'
 import type { Icon } from '@/lib/types'
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Config, type ConfigValues, DEFAULT_CONFIG, applyConfig } from './Config'
 import styles from './Grid.module.css'
 import { GridCells } from './GridCells'
+import { IconSprite } from './IconSprite'
 import { SearchInput } from './SearchInput'
 import { ToastLayer } from './Toast'
 
@@ -28,10 +29,8 @@ export function Grid() {
   const metrics = useGridMetrics(stageRef, config.cellPx, config.resizeDebounceMs)
   const { toasts, push: pushToast, remove: removeToast } = useToasts()
 
-  /* Write the live config to :root custom properties */
   useEffect(() => applyConfig(config), [config])
 
-  /* Derive search mode from the deferred query, so typing stays responsive */
   const mode = useMemo<Mode>(() => {
     const q = deferredQuery.trim()
     if (q) return { kind: 'search', query: deferredQuery }
@@ -39,13 +38,68 @@ export function Grid() {
     return { kind: 'browse', focus: null, originIndex: null }
   }, [deferredQuery, focusIcon, focusIdx])
 
-  const { reservation, origin, cellIcons, resultCount, maxDist } = useCellAssembly(
+  /* -------- Exit-then-enter sequencing ---------------------------------
+   *
+   * Cells stay mounted at their index positions — they never remount. When
+   * `mode` changes, `exiting` toggles `data-phase="exiting"` on the grid
+   * → CSS plays a uniform scale-out on every cell's current layer. After
+   * `swapOutMs`, `committedMode` is updated → `useCellAssembly` recomputes
+   * → each cell receives a new icon prop → the inner layer span (keyed by
+   * icon id) remounts → enter shockwave plays.
+   *
+   * Because the SearchInput is a plain sibling in the same grid (never
+   * remounted, never keyed), it stays focused and interactive throughout.
+   * All cell prop updates land in a single React commit = one synchronous
+   * DOM write batch — no layout thrashing.
+   * ------------------------------------------------------------------ */
+  const [committedMode, setCommittedMode] = useState(mode)
+  const [exiting, setExiting] = useState(false)
+
+  const modeRef = useRef(mode)
+  modeRef.current = mode
+  const exitTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (mode === committedMode) return
+
+    setExiting(true)
+    exitTimerRef.current = window.setTimeout(() => {
+      exitTimerRef.current = null
+      setCommittedMode(modeRef.current)
+      setExiting(false)
+    }, config.swapOutMs)
+
+    return () => {
+      if (exitTimerRef.current !== null) {
+        window.clearTimeout(exitTimerRef.current)
+        exitTimerRef.current = null
+      }
+    }
+  }, [mode, committedMode, config.swapOutMs])
+
+  const { reservation, origin, cellIcons, maxDist } = useCellAssembly(
     db,
     metrics,
-    mode,
+    committedMode,
   )
 
-  /* Stable refs so <Cell /> memoization survives unrelated re-renders */
+  /* -------- SVG sprite — lazy, pre-paint registration ------------------ */
+  const [spriteIcons, setSpriteIcons] = useState<Icon[]>([])
+
+  useLayoutEffect(() => {
+    setSpriteIcons((prev) => {
+      const known = new Set(prev.map((i) => i.id))
+      const additions: Icon[] = []
+      for (const ic of cellIcons) {
+        if (ic && !known.has(ic.id)) {
+          known.add(ic.id)
+          additions.push(ic)
+        }
+      }
+      return additions.length > 0 ? [...prev, ...additions] : prev
+    })
+  }, [cellIcons])
+
   const cellIconsRef = useRef(cellIcons)
   cellIconsRef.current = cellIcons
 
@@ -82,7 +136,7 @@ export function Grid() {
     [pushToast],
   )
 
-  const handleFocusIcon = useCallback((icon: Icon, _el: HTMLButtonElement) => {
+  const handleFocusIcon = useCallback((icon: Icon, _el?: HTMLButtonElement) => {
     const idx = cellIconsRef.current.indexOf(icon)
     setQuery(icon.name.replace(/-/g, ' '))
     setFocusIcon(icon)
@@ -98,19 +152,27 @@ export function Grid() {
   } as React.CSSProperties
 
   return (
-    <div ref={stageRef} className={styles.stage}>
-      {!db ? <div className={styles.loader}>loading icons…</div> : null}
+    <div ref={stageRef} className="fixed inset-0 overflow-hidden bg-bg [contain:strict]">
+      {!db ? (
+        <div className="fixed inset-0 grid place-items-center text-dim text-[11px]">
+          loading icons…
+        </div>
+      ) : null}
 
-      <div className={styles.grid} style={gridStyle}>
+      <IconSprite icons={spriteIcons} />
+
+      <div
+        className={`${styles.grid} w-full h-full`}
+        style={gridStyle}
+        data-phase={exiting ? 'exiting' : 'idle'}
+      >
         <GridCells
           cellIcons={cellIcons}
           metrics={metrics}
           origin={origin}
           maxDist={maxDist}
           ringStepMs={config.ringStepMs}
-          originFromCenter={config.originFromCenter}
           blocked={reservation?.blocked}
-          focusedIndex={focusIdx}
           onCopy={handleCopy}
           onFocusIcon={handleFocusIcon}
         />
@@ -119,8 +181,7 @@ export function Grid() {
           value={query}
           onChange={handleQueryChange}
           onClear={resetContext}
-          count={resultCount}
-          total={db?.icons.length ?? 0}
+          focusedIcon={focusIcon}
         />
       </div>
 

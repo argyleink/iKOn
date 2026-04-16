@@ -1,4 +1,4 @@
-/* SearchInput lives inside the main CSS grid now — parent controls placement */
+/* Grid placement — always visible and interactive. */
 .wrap {
   grid-column: var(--input-col-start) / span var(--input-col-span);
   grid-row: var(--input-row) / span 1;
@@ -11,174 +11,109 @@
   z-index: 2;
 }
 
-.field {
-  position: relative;
-  pointer-events: auto;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: baseline;
-  column-gap: 14px;
-  padding: 0 8px;
-  width: 100%;
-  background: transparent;
-  font-size: 13px;
-  box-shadow: none;
-  filter: none;
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
-.prompt {
-  color: var(--fg);
-  font-size: 11px;
-  text-transform: none;
-  letter-spacing: 0.04em;
-  font-weight: 400;
-}
-
-.kaps {
-  color: var(--fg);
-  text-transform: none;
-  font-weight: 700;
-}
-
+/* --- Search input --- */
 .input {
+  flex: 1 1 0;
+  min-width: 0;
   background: transparent;
   border: 0;
   outline: none;
   color: var(--fg);
   font: inherit;
+  font-size: clamp(1.25rem, 5vw, 3rem);
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  text-align: center;
   width: 100%;
   padding: 0;
-  min-width: 0;
-  -webkit-tap-highlight-color: transparent;
-  -webkit-appearance: none;
   appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  animation: caret-cycle 3360ms steps(8, end) infinite;
 }
 
-.input::-webkit-search-cancel-button,
-.input::-webkit-search-decoration {
+.input::placeholder {
+  color: var(--dim);
+  opacity: 1;
+}
+
+@keyframes caret-cycle {
+  0%       { caret-color: color(display-p3 1 0.05 0.35); }
+  12.5%    { caret-color: color(display-p3 1 0.45 0); }
+  25%      { caret-color: color(display-p3 1 0.95 0.1); }
+  37.5%    { caret-color: color(display-p3 0.25 1 0.35); }
+  50%      { caret-color: color(display-p3 0 1 0.95); }
+  62.5%    { caret-color: color(display-p3 0.2 0.4 1); }
+  75%      { caret-color: color(display-p3 0.75 0.1 1); }
+  87.5%    { caret-color: color(display-p3 1 0.1 0.75); }
+}
+
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
   display: none;
 }
 
-@media (max-width: 640px) {
-  .field {
-    font-size: 16px;
-  }
-}
-
-.countWrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.count {
-  color: var(--fg);
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  cursor: help;
-  outline: none;
-  font-weight: 500;
-  min-width: 4ch;
-  text-align: right;
-}
-
-/* Tooltip */
-.tooltip {
-  position: absolute;
-  right: -2px;
-  top: calc(100% + 16px);
-  min-width: 280px;
-  padding: 12px 14px;
-  background: color-mix(in oklab, var(--bg) 88%, var(--fg) 12%);
-  color: var(--fg);
-  text-transform: none;
-  letter-spacing: 0.02em;
-  font-size: 11px;
-  line-height: 1.5;
-  border: 1px solid var(--faint);
-  opacity: 0;
-  transform: translate3d(0, -4px, 0);
-  pointer-events: none;
-  transition: opacity 220ms var(--ease-out), transform 320ms var(--spring);
+/* --- Chip (selected icon) --- */
+.chip {
+  align-self: center;
   display: grid;
-  gap: 8px;
-  z-index: 30;
-  backdrop-filter: blur(10px);
-  will-change: opacity, transform;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  cursor: pointer;
+  pointer-events: auto;
+  flex: 0 0 auto;
+  animation: chip-enter 420ms var(--spring) both;
+  transition: background-color 140ms var(--ease-out), color 140ms var(--ease-out);
 }
 
-.tooltip::before {
-  content: "";
-  position: absolute;
-  right: 14px;
-  top: -5px;
-  width: 8px;
-  height: 8px;
-  background: inherit;
-  border-top: 1px solid var(--faint);
-  border-left: 1px solid var(--faint);
-  transform: rotate(45deg);
+@keyframes chip-enter {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
-.countWrap:hover .tooltip,
-.count:focus-visible + .tooltip {
-  opacity: 1;
-  transform: translate3d(0, 0, 0);
+.chip:hover,
+.chip:focus-visible {
+  background: var(--accent);
+  color: var(--bg);
 }
 
-.tHead {
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-size: 10px;
-  color: var(--fg);
+.chip:focus-visible {
+  outline: 2px dashed var(--outline, var(--accent));
+  outline-offset: 3px;
 }
 
-.tBody {
+.chipIcon {
   display: grid;
-  gap: 4px;
-  color: var(--dim);
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  color: currentColor;
+  animation: chip-icon-swap 320ms var(--spring) both;
 }
 
-.tRow {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-style: normal;
+@keyframes chip-icon-swap {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
-.tRow em {
-  font-style: normal;
-  color: color-mix(in oklab, var(--fg) 80%, transparent);
+.chipIcon svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
 }
 
-.tWeight {
-  color: var(--accent) !important;
-  font-variant-numeric: tabular-nums;
+.chipIcon svg[data-pack="phosphor"] {
+  stroke: none;
+  fill: currentColor;
 }
 
-.tFoot {
-  padding-top: 6px;
-  border-top: 1px solid var(--faint);
-  color: var(--dim);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-/* Animated SVG underline */
+/* --- Animated SVG underline --- */
 .underline {
   position: absolute;
   left: 8px;
@@ -187,7 +122,6 @@
   width: calc(100% - 16px);
   height: 2px;
   overflow: visible;
-  grid-column: 1 / -1;
 }
 
 .underline path {
@@ -200,17 +134,21 @@
   transition: stroke-dashoffset 520ms var(--ease-out), stroke 300ms var(--ease-out);
 }
 
-.field:hover .underline path {
+label:hover .underline path {
   stroke: color-mix(in oklab, var(--fg) 40%, transparent);
   stroke-dashoffset: 60;
 }
 
-.field:focus-within .underline path {
+label:focus-within .underline path {
   stroke: var(--fg);
   stroke-dashoffset: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .input {
+    animation: none;
+    caret-color: var(--accent);
+  }
   .underline path {
     transition: stroke-dashoffset 360ms var(--ease-out);
   }

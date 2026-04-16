@@ -5,7 +5,7 @@
  *   1. Viewport resize  — metrics change → every Cell re-renders because its
  *      position-derived props (delay/dir/ocx/ocy/weight) all change.
  *   2. Icon swap        — query change flips `icon` on every visible cell,
- *      driving `useSwap` + `useStagedFlag` on every Cell simultaneously.
+ *      driving a fresh commit with new `<use>` references via the sprite.
  *
  * We render <GridCells> with a realistic cell count (20×12 = 240) and use
  * React.Profiler to capture actual commit durations and commit counts.
@@ -89,9 +89,9 @@ const baseProps = (icons: (Icon | null)[], cols = COLS, rows = ROWS, cellPx = CE
   origin: { col: (cols - 1) / 2, row: (rows - 1) / 2 },
   maxDist: Math.hypot(cols / 2, rows / 2),
   ringStepMs: 28,
-  originFromCenter: false,
+
   blocked: undefined,
-  focusedIndex: null,
+
   onCopy: stableOnCopy,
   onFocusIcon: stableOnFocusIcon,
 })

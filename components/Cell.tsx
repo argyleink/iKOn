@@ -1,76 +1,38 @@
 'use client'
 
-import { useSwap } from '@/lib/hooks/useSwap'
 import type { Icon } from '@/lib/types'
-import { memo, useEffect, useRef } from 'react'
+import { memo, useRef } from 'react'
 import styles from './Cell.module.css'
+
+export type CellGeometry = {
+  d: string
+  stroke: string
+  alpha: string
+}
 
 type CellProps = {
   icon: Icon | null
-  index: number
-  focused: boolean
-  registerRef: (index: number, el: HTMLButtonElement | null) => void
+  geometry: CellGeometry
   onCopy: (icon: Icon, el: HTMLButtonElement) => void
   onFocusIcon: (icon: Icon, el: HTMLButtonElement) => void
 }
 
-const prettyName = (name: string) => name.replace(/-/g, ' ')
-
-/**
- * Isolated swap layers.
- *
- * Each layer is keyed by its icon id + role (`in-<id>` / `out-<id>`) so React
- * mounts fresh DOM nodes on every swap. CSS `@starting-style` (Cell.module.css)
- * defines the "from" state — the browser runs the transition the instant the
- * node is inserted, staggered per-cell by `--d` (exit wave) and
- * `--d + --wave-offset` (enter wave).
- *
- * Memoized on `icon` so geometry-only re-renders (resize / origin change) of
- * the parent Cell don't drag useSwap + SVG innerHTML through reconciliation.
- */
-const IconLayers = memo(function IconLayers({ icon }: { icon: Icon | null }) {
-  const { current, prev } = useSwap(icon)
-  return (
-    <>
-      {prev ? (
-        <span
-          key={`out-${prev.id}`}
-          className={styles.layer}
-          data-role="out"
-          aria-hidden="true"
-          dangerouslySetInnerHTML={{ __html: prev.svg }}
-        />
-      ) : null}
-      {current ? (
-        <span
-          key={`in-${current.id}`}
-          className={styles.layer}
-          data-role="in"
-          aria-hidden="true"
-          dangerouslySetInnerHTML={{ __html: current.svg }}
-        />
-      ) : null}
-    </>
-  )
-})
-
-function CellImpl({ icon, index, focused, registerRef, onCopy, onFocusIcon }: CellProps) {
-  const buttonRef = useRef<HTMLButtonElement | null>(null)
+function CellImpl({ icon, geometry, onCopy, onFocusIcon }: CellProps) {
   const clickTimer = useRef<number | null>(null)
-
-  useEffect(() => {
-    registerRef(index, buttonRef.current)
-    return () => registerRef(index, null)
-  }, [index, registerRef])
 
   return (
     <button
-      ref={buttonRef}
       type="button"
-      className={styles.cell}
-      data-focus={focused || undefined}
+      className={`relative w-[var(--cell)] h-[var(--cell)] p-1.5 bg-transparent border-0 cursor-pointer text-fg select-none [contain:style] outline-0 outline-dashed outline-transparent transition-[outline-offset,outline-color] ${styles.cell}`}
+      style={
+        {
+          '--d': geometry.d,
+          '--stroke': geometry.stroke,
+          '--alpha': geometry.alpha,
+        } as React.CSSProperties
+      }
       data-empty={icon ? undefined : true}
-      aria-label={icon ? `${prettyName(icon.name)} icon · ${icon.pack}` : 'empty cell'}
+      aria-label={icon ? `${icon.name.replace(/-/g, ' ')} · ${icon.pack}` : 'empty cell'}
       tabIndex={icon ? 0 : -1}
       onClick={(e) => {
         if (!icon) return
@@ -97,7 +59,13 @@ function CellImpl({ icon, index, focused, registerRef, onCopy, onFocusIcon }: Ce
         }
       }}
     >
-      <IconLayers icon={icon} />
+      {icon ? (
+        <span key={icon.id} className={styles.layer} aria-hidden="true">
+          <svg className={styles.svg} data-pack={icon.pack}>
+            <use href={`#${icon.id}`} />
+          </svg>
+        </span>
+      ) : null}
     </button>
   )
 }

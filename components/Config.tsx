@@ -9,16 +9,12 @@ export type ConfigValues = {
   ringStepMs: number
   swapInMs: number
   swapOutMs: number
-  exitPushPx: number
   waveOffsetMs: number
-  aftershockDelayMs: number
-  aftershockAmount: number
   resizeDebounceMs: number
   bg: string
   fg: string
   accent: string
   curve: keyof typeof SPRING_CURVES
-  originFromCenter: boolean
 }
 
 export const SPRING_CURVES = {
@@ -45,29 +41,31 @@ export const DEFAULT_CONFIG: ConfigValues = {
   ringStepMs: 38,
   swapInMs: 720,
   swapOutMs: 460,
-  exitPushPx: 44,
   waveOffsetMs: 260,
-  aftershockDelayMs: 140,
-  aftershockAmount: 0.08,
-  resizeDebounceMs: 300,
+  // 0 = pure rAF throttling (smooth during drag). Bump up for extra
+  // post-settle delay on micro-oscillations.
+  resizeDebounceMs: 0,
   bg: '#000000',
   fg: '#ffffff',
   accent: '#ff6a1a',
   curve: 'ripple',
-  originFromCenter: true,
 }
 
+/**
+ * Write config values to CSS custom properties on :root.
+ *
+ * Note: `ringStepMs` is intentionally NOT written as a CSS var — it's
+ * consumed in JavaScript by GridCells.buildGeometry which bakes the
+ * per-cell radial delay directly into each cell's `--d`. Writing a global
+ * `--ring-step` would have no effect on the rendered animation.
+ */
 export function applyConfig(cfg: ConfigValues) {
   const r = document.documentElement.style
   r.setProperty('--cell', `${cfg.cellPx}px`)
   r.setProperty('--gap', `${cfg.gapPx}px`)
-  r.setProperty('--ring-step', `${cfg.ringStepMs}ms`)
   r.setProperty('--swap-in', `${cfg.swapInMs}ms`)
   r.setProperty('--swap-out', `${cfg.swapOutMs}ms`)
-  r.setProperty('--exit-push', `${cfg.exitPushPx}px`)
   r.setProperty('--wave-offset', `${cfg.waveOffsetMs}ms`)
-  r.setProperty('--aftershock-delay', `${cfg.aftershockDelayMs}ms`)
-  r.setProperty('--aftershock-amount', `${cfg.aftershockAmount}`)
   r.setProperty('--bg', cfg.bg)
   r.setProperty('--fg', cfg.fg)
   r.setProperty('--accent', cfg.accent)
@@ -123,10 +121,10 @@ export function Config({ open, values, onChange, onClose }: Props) {
         onChange={(v) => set('gapPx', v)}
       />
       <Slider
-        label="resize debounce (ms)"
+        label="resize settle (ms)"
         min={0}
-        max={1000}
-        step={50}
+        max={500}
+        step={25}
         value={values.resizeDebounceMs}
         onChange={(v) => set('resizeDebounceMs', v)}
       />
@@ -157,14 +155,6 @@ export function Config({ open, values, onChange, onClose }: Props) {
         onChange={(v) => set('swapOutMs', v)}
       />
       <Slider
-        label="exit push (px)"
-        min={0}
-        max={96}
-        step={2}
-        value={values.exitPushPx}
-        onChange={(v) => set('exitPushPx', v)}
-      />
-      <Slider
         label="wave offset (ms)"
         min={0}
         max={800}
@@ -172,17 +162,6 @@ export function Config({ open, values, onChange, onClose }: Props) {
         value={values.waveOffsetMs}
         onChange={(v) => set('waveOffsetMs', v)}
       />
-
-      <label className={styles.row}>
-        <span className={styles.label}>anchor entry at origin</span>
-        <input
-          type="checkbox"
-          className={styles.toggle}
-          checked={values.originFromCenter}
-          onChange={(e) => set('originFromCenter', e.target.checked)}
-        />
-        <span className={styles.value}>{values.originFromCenter ? 'on' : 'off'}</span>
-      </label>
 
       <label className={styles.row}>
         <span className={styles.label}>spring curve</span>
