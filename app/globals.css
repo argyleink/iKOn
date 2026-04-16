@@ -46,16 +46,20 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Superellipse corner shape with a rounded-rect fallback. Applied to every
+/* Squircle corner shape with a rounded-rect fallback. Applied to every
    focusable button via `.superellipse` and to the search chip. Works as a
    progressive enhancement — browsers without corner-shape get border-radius
-   only, which still looks intentional. */
+   only, which still looks intentional. (`squircle` is the named keyword
+   equivalent to superellipse(2); we prefer the keyword now that it's in the
+   CSS Values 4 draft.) */
 .superellipse {
   border-radius: 10px;
 }
-@supports (corner-shape: superellipse(1.25)) {
+/* biome-ignore lint/correctness/noUnknownProperty: corner-shape is a new CSS Values 4 proposal */
+@supports (corner-shape: squircle) {
   .superellipse {
-    corner-shape: superellipse(1.25);
+    /* biome-ignore lint/correctness/noUnknownProperty: corner-shape is a new CSS Values 4 proposal */
+    corner-shape: squircle;
   }
 }
 

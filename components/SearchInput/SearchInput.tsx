@@ -10,11 +10,20 @@ type Props = {
   onChange: (v: string) => void
   onClear: () => void
   focusedIcon?: Icon | null
+  /** When the current query returned zero matches, flag the clear button
+   *  in display-p3 red so the user has an obvious way out. */
+  noResults?: boolean
 }
 
 const IDLE_MS = 5000
 
-export function SearchInput({ value, onChange, onClear, focusedIcon = null }: Props) {
+export function SearchInput({
+  value,
+  onChange,
+  onClear,
+  focusedIcon = null,
+  noResults = false,
+}: Props) {
   const labelId = useId()
   const inputRef = useRef<HTMLInputElement | null>(null)
 
@@ -102,7 +111,9 @@ export function SearchInput({ value, onChange, onClear, focusedIcon = null }: Pr
             onClick={handleClear}
             aria-label="clear search"
             title="clear"
-            className="superellipse flex-none self-center grid place-items-center w-[22px] h-[22px] bg-transparent text-fg opacity-25 cursor-pointer pointer-events-auto transition-opacity duration-150 hover:opacity-100 focus-visible:opacity-100"
+            className={`superellipse flex-none self-center grid place-items-center w-[22px] h-[22px] bg-transparent cursor-pointer pointer-events-auto transition-opacity duration-150 hover:opacity-100 focus-visible:opacity-100 ${
+              noResults ? 'text-[color(display-p3_1_0_0)] opacity-100' : 'text-fg opacity-25'
+            }`}
           >
             <svg
               viewBox="0 0 20 20"

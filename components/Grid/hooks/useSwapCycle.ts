@@ -1,73 +1,127 @@
 'use client'
 
-import { type RefObject, useEffect, useReducer, useRef } from 'react'
 import type { Icon } from '@/lib/icons'
+import { type RefObject, useEffect, useMemo, useReducer, useRef } from 'react'
 import type { Mode } from './useCellAssembly'
+
+/** Primitive content-key for a Mode. Used instead of the Mode object itself
+ *  so the reducer can compare by value (string equality) — avoids spurious
+ *  exit cycles when useMemo produces a new Mode reference whose content
+ *  hasn't changed (e.g. clearing focus while deferredQuery lags one render
+ *  behind, producing two back-to-back Modes with identical search content). */
+function modeKey(mode: Mode): string {
+  if (mode.kind === 'search') return `s:${mode.query}`
+  if (mode.focus) return `f:${mode.focus.id}:${mode.originIndex ?? ''}`
+  return 'browse'
+}
 
 /**
  * Finite state machine for the grid's exit-then-enter cycle.
  *
  * States:
- *   idle     — resting; layers are at scale(1); no transition running.
- *   exiting  — `data-phase="exiting"` applied; layers transitioning to
- *              scale(0); committing the new icon set is blocked until the
- *              `transform` transitionend bubbles up.
+ *   idle      — resting; no transition in flight.
+ *   exiting   — `data-phase="exiting"` applied; layers transitioning to
+ *               scale(0). Commit blocked until the `transform` transitionend
+ *               bubbles up.
+ *   mounting  — buffer phase AFTER exit has committed new icons but BEFORE
+ *               their @starting-style enter transitions have had a chance
+ *               to start (2 frames). Keystrokes during this window are
+ *               buffered into `pendingMode` and applied when mounting
+ *               completes. This is what eliminates the race where a fresh
+ *               layer was still at scale(0) when a new exit was requested
+ *               (same source and target value → no transition, stuck).
  *
- * Because the enter animation is carried entirely by CSS @starting-style
- * on freshly-mounted layer spans (each is keyed by icon id), there is NO
- * third "entering" state — the new layers mount under `data-phase="idle"`
- * and transition from scale(0) to scale(1) automatically. That eliminates
- * the old race condition where fast typing during the idle-gap between
- * exit end and an rAF-scheduled `data-entered=true` left layers stuck at
- * scale(0) with no transition to fire (same source and target value).
+ * `latestIconsRef` carries the freshest `cellIcons` so the commit inside
+ * EXIT_COMPLETE picks up anything the user typed during the exit. Acts
+ * like the abort-controller signal the user asked for: new typing takes
+ * precedence over any in-flight state without racing the DOM.
  */
 
-type Phase = 'idle' | 'exiting'
+type Phase = 'idle' | 'exiting' | 'mounting'
 
 type State = {
   phase: Phase
   displayedIcons: (Icon | null)[]
-  prevMode: Mode | null
+  prevModeKey: string | null
+  /** Buffered mode change that arrived while the state machine was in a
+   *  phase where exit couldn't safely begin (mounting). Applied on
+   *  MOUNT_COMPLETE. Stored as a key (not a Mode) for the same reason as
+   *  prevModeKey — content equality across reference-fresh rerenders. */
+  pendingModeKey: string | null
 }
 
 type Action =
-  | { type: 'INPUT_CHANGED'; mode: Mode; cellIcons: (Icon | null)[] }
+  | { type: 'INPUT_CHANGED'; modeKey: string; cellIcons: (Icon | null)[] }
   | { type: 'EXIT_COMPLETE'; cellIcons: (Icon | null)[] }
+  | { type: 'MOUNT_COMPLETE' }
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'INPUT_CHANGED': {
-      const { mode, cellIcons } = action
-      // First commit ever — just show the icons, no exit.
-      if (state.prevMode === null) {
+      const { modeKey: key, cellIcons } = action
+
+      // First commit — enter without an exit.
+      if (state.prevModeKey === null) {
         if (cellIcons.length === 0) return state
-        return { phase: 'idle', displayedIcons: cellIcons, prevMode: mode }
+        return {
+          phase: 'mounting',
+          displayedIcons: cellIcons,
+          prevModeKey: key,
+          pendingModeKey: null,
+        }
       }
-      // Same mode (resize / layout-only): sync displayedIcons in place if
-      // we're idle; during exit, ignore — the new icons will be picked up
-      // via `latestIconsRef` at exit completion time.
-      if (state.prevMode === mode) {
+
+      // Same mode (by content) — resize/layout-only. Only sync in place
+      // while idle. This is the path that eliminates the double-render
+      // when clearing the search: deferredQuery lags one render behind
+      // `query`, so we briefly get two Modes with the same search content
+      // but different references. Comparing by key collapses that pair.
+      if (state.prevModeKey === key) {
         if (state.phase === 'idle' && cellIcons !== state.displayedIcons) {
           return { ...state, displayedIcons: cellIcons }
         }
         return state
       }
-      // Real mode change → start exit. If already exiting, just update
-      // prevMode; the in-flight exit will commit the latest cellIcons when
-      // its transitionend fires.
-      return { phase: 'exiting', displayedIcons: state.displayedIcons, prevMode: mode }
+
+      // Real mode change.
+      if (state.phase === 'mounting') {
+        // Fresh layers haven't had time to start their enter transitions
+        // yet — triggering exit now would leave them stuck at scale(0)
+        // with no transition to fire. Buffer and apply on MOUNT_COMPLETE.
+        return { ...state, pendingModeKey: key }
+      }
+      return {
+        ...state,
+        phase: 'exiting',
+        prevModeKey: key,
+        pendingModeKey: null,
+      }
     }
     case 'EXIT_COMPLETE':
-      // Commit the latest icons and return to idle. New layer spans mount
-      // fresh (keyed by new icon ids) and auto-animate via @starting-style.
-      return { ...state, phase: 'idle', displayedIcons: action.cellIcons }
+      return {
+        ...state,
+        phase: 'mounting',
+        displayedIcons: action.cellIcons,
+      }
+    case 'MOUNT_COMPLETE':
+      // If input arrived during mounting, flush it into a new exit cycle.
+      if (state.pendingModeKey) {
+        return {
+          ...state,
+          phase: 'exiting',
+          prevModeKey: state.pendingModeKey,
+          pendingModeKey: null,
+        }
+      }
+      return { ...state, phase: 'idle' }
   }
 }
 
 const initialState: State = {
   phase: 'idle',
   displayedIcons: [],
-  prevMode: null,
+  prevModeKey: null,
+  pendingModeKey: null,
 }
 
 export function useSwapCycle(
@@ -77,19 +131,16 @@ export function useSwapCycle(
 ) {
   const [state, dispatch] = useReducer(reducer, initialState)
 
-  // Always carry the newest cellIcons so an in-flight exit commits them
-  // when its transitionend arrives — fast typing batches into one cycle.
   const latestIconsRef = useRef(cellIcons)
   latestIconsRef.current = cellIcons
 
-  // Mode / cellIcons changes flow through the reducer.
-  useEffect(() => {
-    dispatch({ type: 'INPUT_CHANGED', mode, cellIcons })
-  }, [mode, cellIcons])
+  const key = useMemo(() => modeKey(mode), [mode])
 
-  // Exit completion: listen for the uniform transform transitionend on the
-  // grid wrapper. Filter by propertyName so an opacity event (from hover)
-  // doesn't prematurely close the cycle.
+  useEffect(() => {
+    dispatch({ type: 'INPUT_CHANGED', modeKey: key, cellIcons })
+  }, [key, cellIcons])
+
+  // Exit completion via transitionend on transform.
   useEffect(() => {
     if (state.phase !== 'exiting') return
     const el = gridRef.current
@@ -103,6 +154,24 @@ export function useSwapCycle(
     el.addEventListener('transitionend', onEnd)
     return () => el.removeEventListener('transitionend', onEnd)
   }, [state.phase, gridRef])
+
+  // Mounting buffer — waits 2 frames so newly-mounted layers have a chance
+  // to paint at their @starting-style value (scale 0) and kick off their
+  // enter transition BEFORE any queued exit can take over. Without this
+  // window, fast typing could apply `data-phase="exiting"` while layers
+  // were still at scale(0), producing a stuck no-op transition.
+  useEffect(() => {
+    if (state.phase !== 'mounting') return
+    let raf1 = 0
+    let raf2 = 0
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => dispatch({ type: 'MOUNT_COMPLETE' }))
+    })
+    return () => {
+      cancelAnimationFrame(raf1)
+      cancelAnimationFrame(raf2)
+    }
+  }, [state.phase])
 
   return { phase: state.phase, displayedIcons: state.displayedIcons }
 }
