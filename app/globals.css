@@ -31,12 +31,6 @@ body {
   touch-action: manipulation;
 }
 
-body {
-  overflow: hidden;
-  overscroll-behavior: none;
-  text-transform: uppercase;
-}
-
 ::selection {
   background: var(--selection);
   color: var(--bg);
