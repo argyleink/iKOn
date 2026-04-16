@@ -39,9 +39,17 @@ function cleanSvg(svg: string, pack: Pack): string {
   let s = svg
     .replace(/<\?xml[^?]*\?>/g, '')
     .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/\s+width="[^"]*"/g, '')
-    .replace(/\s+height="[^"]*"/g, '')
     .trim()
+  // Strip width/height only on the root <svg> tag. An earlier global regex
+  // also wiped width/height on descendant <rect> elements, which silently
+  // broke lucide's rect-based icons (square, rectangle-*, square-square,
+  // etc.) — they kept a valid viewBox but rendered at 0×0 because each
+  // <rect> needs width/height to have any geometry. Scope the strip to the
+  // opening svg tag via a callback replace so the regex only touches that
+  // tag's own attribute list.
+  s = s.replace(/<svg\b[^>]*>/, (tag) =>
+    tag.replace(/\s+width="[^"]*"/g, '').replace(/\s+height="[^"]*"/g, ''),
+  )
   s = s.replace(
     /<svg\b/,
     `<svg data-pack="${pack}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet"`,
