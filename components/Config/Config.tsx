@@ -108,7 +108,7 @@ export function Config({ open, values, onChange, onClose }: Props) {
         <button
           type="button"
           onClick={onClose}
-          className="bg-transparent border-0 text-dim text-[16px] cursor-pointer px-1 leading-none transition-colors duration-150 hover:text-fg focus-visible:outline-2 focus-visible:outline-dashed focus-visible:[outline-color:var(--outline)] focus-visible:outline-offset-2"
+          className="bg-transparent border-0 text-dim text-[16px] cursor-pointer px-1 leading-none transition-colors duration-150 hover:text-fg superellipse"
           aria-label="close"
         >
           ×
@@ -169,7 +169,7 @@ export function Config({ open, values, onChange, onClose }: Props) {
       <Row>
         <span className="text-dim whitespace-nowrap">spring</span>
         <select
-          className={`col-span-2 bg-transparent border border-faint text-fg py-[3px] px-1.5 font-[inherit] uppercase cursor-pointer focus-visible:outline-2 focus-visible:outline-dashed focus-visible:[outline-color:var(--outline)] focus-visible:outline-offset-2 ${styles.select}`}
+          className={`col-span-2 bg-transparent border border-faint text-fg py-[3px] px-1.5 font-[inherit] uppercase cursor-pointer superellipse ${styles.select}`}
           value={values.spring}
           onChange={(e) => set('spring', e.target.value as ConfigValues['spring'])}
         >
@@ -199,7 +199,7 @@ export function Config({ open, values, onChange, onClose }: Props) {
       <footer className="flex items-center justify-between mt-3 pt-2.5 border-t border-faint text-dim">
         <button
           type="button"
-          className="bg-transparent border border-faint text-fg px-2.5 py-1 font-[inherit] uppercase cursor-pointer transition-[border-color,color] duration-150 hover:[border-color:var(--outline)] hover:[color:var(--outline)] focus-visible:outline-2 focus-visible:outline-dashed focus-visible:[outline-color:var(--outline)] focus-visible:outline-offset-2"
+          className="bg-transparent border border-faint text-fg px-2.5 py-1 font-[inherit] uppercase cursor-pointer transition-[border-color,color] duration-150 hover:[border-color:var(--outline)] hover:[color:var(--outline)] superellipse"
           onClick={() => onChange(DEFAULT_CONFIG)}
         >
           reset all
