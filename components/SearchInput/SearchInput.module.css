@@ -1,17 +1,4 @@
-/* Grid-area placement (requires --input-* custom properties), keyframes,
-   and browser-chrome pseudo-elements. Everything structural is Tailwind. */
-
-.wrap {
-  grid-column: var(--input-col-start) / span var(--input-col-span);
-  grid-row: var(--input-row) / span 1;
-  align-self: stretch;
-  justify-self: stretch;
-  display: flex;
-  align-items: center;
-  pointer-events: none;
-  position: relative;
-  z-index: 2;
-}
+/* Only keyframes + pseudo-element browser chrome. Layout is Tailwind. */
 
 .input {
   animation: caret-cycle 3360ms steps(8, end) infinite;
@@ -52,7 +39,6 @@
 .chip {
   animation: chip-enter 420ms var(--spring) both;
 }
-
 .chipIcon {
   animation: chip-icon-swap 320ms var(--spring) both;
 }
@@ -67,7 +53,6 @@
     opacity: 1;
   }
 }
-
 @keyframes chip-icon-swap {
   from {
     transform: scale(0);

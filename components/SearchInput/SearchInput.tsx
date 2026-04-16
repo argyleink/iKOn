@@ -32,21 +32,20 @@ export function SearchInput({ value, onChange, onClear, focusedIcon = null }: Pr
     return () => {
       if (idleTimerRef.current !== null) window.clearTimeout(idleTimerRef.current)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const showTips = idle && value.trim() === ''
-  const { tip, idx: tipIdx } = useCyclingTip(showTips)
+  const { tip } = useCyclingTip(showTips)
   const hasValue = value.length > 0
 
   const handleClear = () => {
-    onChange('')
+    onClear()
     resetIdle()
     inputRef.current?.focus()
   }
 
   return (
-    <search className={styles.wrap}>
+    <search className="[grid-column:var(--input-col-start)/span_var(--input-col-span)] [grid-row:var(--input-row)/span_1] self-stretch justify-self-stretch flex items-center pointer-events-none relative z-[2]">
       <label className="relative pointer-events-auto flex items-center justify-center gap-3.5 px-2 w-full">
         <span id={labelId} className="sr-only">
           Search icons
@@ -54,63 +53,56 @@ export function SearchInput({ value, onChange, onClear, focusedIcon = null }: Pr
         {focusedIcon ? (
           <button
             type="button"
+            // biome-ignore lint/a11y/noPositiveTabindex: cells use positive tabindex for radial order, these nearby buttons need to come first
+            tabIndex={2}
             onClick={onClear}
             aria-label={`Selected: ${focusedIcon.name.replace(/-/g, ' ')}. Click to clear.`}
             title="selected · click to clear"
-            className={`flex-none self-center grid place-items-center w-[22px] h-[22px] p-0 bg-transparent border border-[var(--outline,var(--fg))] text-[var(--outline,var(--fg))] cursor-pointer pointer-events-auto transition-colors duration-150 hover:bg-[var(--outline,var(--fg))] hover:text-bg focus-visible:outline-2 focus-visible:outline-dashed focus-visible:[outline-color:var(--outline)] focus-visible:outline-offset-[3px] ${styles.chip}`}
+            className={`flex-none self-center grid place-items-center w-[var(--cell)] h-[var(--cell)] p-1.5 bg-transparent border border-[var(--outline,var(--fg))] text-[var(--outline,var(--fg))] cursor-pointer pointer-events-auto transition-colors duration-150 hover:bg-[var(--outline,var(--fg))] hover:text-bg focus-visible:outline-2 focus-visible:outline-dashed focus-visible:[outline-color:var(--outline)] focus-visible:outline-offset-[3px] ${styles.chip}`}
           >
             <span
               key={focusedIcon.id}
-              className={`grid place-items-center w-4 h-4 text-current [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:fill-none [&>svg]:[stroke-width:2] [&>svg[data-pack=phosphor]]:stroke-none [&>svg[data-pack=phosphor]]:fill-current ${styles.chipIcon}`}
+              className={`grid place-items-center w-full h-full text-current [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:fill-none [&>svg]:[stroke-width:1.75] [&>svg[data-pack=phosphor]]:stroke-none [&>svg[data-pack=phosphor]]:fill-current ${styles.chipIcon}`}
               aria-hidden="true"
               dangerouslySetInnerHTML={{ __html: focusedIcon.svg }}
             />
           </button>
         ) : null}
 
-        {/* Input + tip overlay live in the same flex slot. Tip overlay is
-            absolutely positioned inside this relative wrap so the input
-            keeps its full width and center alignment. */}
-        <span className="relative flex-1 min-w-0 flex items-center justify-center">
-          <input
-            ref={inputRef}
-            className={`w-full min-w-0 bg-transparent border-0 outline-none text-fg text-[18px] font-thin tracking-[0.04em] uppercase text-center p-0 appearance-none [-webkit-tap-highlight-color:transparent] ${styles.input}`}
-            type="search"
-            inputMode="search"
-            enterKeyHint="search"
-            value={value}
-            spellCheck={false}
-            autoCapitalize="off"
-            autoCorrect="off"
-            autoComplete="off"
-            // biome-ignore lint/a11y/noAutofocus: primary interaction of the app.
-            autoFocus
-            aria-labelledby={labelId}
-            onInput={resetIdle}
-            onFocus={resetIdle}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') onClear()
-            }}
-          />
-          {showTips ? (
-            <span
-              key={tipIdx}
-              aria-hidden="true"
-              className="absolute inset-0 flex items-center justify-center pointer-events-none text-dim text-[14px] lowercase tracking-[0.04em] [animation:tip-reveal_520ms_var(--ease-out-3)]"
-            >
-              {tip}
-            </span>
-          ) : null}
-        </span>
+        <input
+          ref={inputRef}
+          // biome-ignore lint/a11y/noPositiveTabindex: cells use positive tabindex for radial order, the input must come first
+          tabIndex={1}
+          className={`flex-1 min-w-0 bg-transparent border-0 outline-none text-fg text-[18px] font-thin tracking-[0.04em] uppercase text-center p-0 appearance-none [-webkit-tap-highlight-color:transparent] placeholder:text-dim placeholder:opacity-100 placeholder:lowercase placeholder:tracking-[0.04em] ${styles.input}`}
+          type="search"
+          inputMode="search"
+          enterKeyHint="search"
+          value={value}
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+          autoComplete="off"
+          placeholder={showTips ? tip : ''}
+          // biome-ignore lint/a11y/noAutofocus: primary interaction of the app.
+          autoFocus
+          aria-labelledby={labelId}
+          onInput={resetIdle}
+          onFocus={resetIdle}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') onClear()
+          }}
+        />
 
         {hasValue ? (
           <button
             type="button"
+            // biome-ignore lint/a11y/noPositiveTabindex: cells use positive tabindex for radial order, the clear button needs to come first
+            tabIndex={2}
             onClick={handleClear}
             aria-label="clear search"
             title="clear"
-            className="flex-none self-center grid place-items-center w-[22px] h-[22px] rounded-full border border-fg/0 bg-transparent text-fg opacity-25 cursor-pointer pointer-events-auto transition-opacity duration-150 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-dashed focus-visible:[outline-color:var(--outline)] focus-visible:outline-offset-[3px]"
+            className="flex-none self-center grid place-items-center w-[22px] h-[22px] rounded-full bg-transparent text-fg opacity-25 cursor-pointer pointer-events-auto transition-opacity duration-150 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-dashed focus-visible:[outline-color:var(--outline)] focus-visible:outline-offset-[3px]"
           >
             <svg
               viewBox="0 0 20 20"
