@@ -70,7 +70,7 @@ export function SearchInput({
             // Icon fill tracks `--selection` so the chip matches whatever
             // P3 color was last cycled by useSelectionColor. Falls back to
             // --fg if the variable hasn't been set yet (pre-first-selection).
-            className={`flex-none self-center grid place-items-center w-[var(--cell)] h-[var(--cell)] p-1.5 bg-transparent text-[var(--selection,var(--fg))] cursor-pointer pointer-events-auto transition-colors duration-150 hover:bg-[var(--selection,var(--fg))] hover:text-bg ${styles.chip}`}
+            className={`superellipse flex-none self-center grid place-items-center w-[var(--cell)] h-[var(--cell)] p-1.5 bg-transparent text-[var(--selection,var(--fg))] cursor-pointer pointer-events-auto transition-colors duration-150 hover:bg-[var(--selection,var(--fg))] hover:text-bg ${styles.chip}`}
           >
             <span
               key={focusedIcon.id}
