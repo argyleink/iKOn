@@ -2,6 +2,13 @@
 
 .input {
   animation: caret-cycle 3360ms steps(8, end) infinite;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    #0000,
+    #000 5%,
+    #000 95%,
+    #0000
+  );
 }
 
 /* While a placeholder tip is visible, hide the caret so it doesn't compete
