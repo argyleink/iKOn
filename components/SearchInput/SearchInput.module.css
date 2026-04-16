@@ -1,0 +1,87 @@
+/* Grid-area placement (requires --input-* custom properties), keyframes,
+   and browser-chrome pseudo-elements. Everything structural is Tailwind. */
+
+.wrap {
+  grid-column: var(--input-col-start) / span var(--input-col-span);
+  grid-row: var(--input-row) / span 1;
+  align-self: stretch;
+  justify-self: stretch;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  position: relative;
+  z-index: 2;
+}
+
+.input {
+  animation: caret-cycle 3360ms steps(8, end) infinite;
+}
+
+@keyframes caret-cycle {
+  0% {
+    caret-color: color(display-p3 1 0.05 0.35);
+  }
+  12.5% {
+    caret-color: color(display-p3 1 0.45 0);
+  }
+  25% {
+    caret-color: color(display-p3 1 0.95 0.1);
+  }
+  37.5% {
+    caret-color: color(display-p3 0.25 1 0.35);
+  }
+  50% {
+    caret-color: color(display-p3 0 1 0.95);
+  }
+  62.5% {
+    caret-color: color(display-p3 0.2 0.4 1);
+  }
+  75% {
+    caret-color: color(display-p3 0.75 0.1 1);
+  }
+  87.5% {
+    caret-color: color(display-p3 1 0.1 0.75);
+  }
+}
+
+.input::-webkit-search-cancel-button,
+.input::-webkit-search-decoration {
+  display: none;
+}
+
+.chip {
+  animation: chip-enter 420ms var(--spring) both;
+}
+
+.chipIcon {
+  animation: chip-icon-swap 320ms var(--spring) both;
+}
+
+@keyframes chip-enter {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes chip-icon-swap {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .input {
+    animation: none;
+    caret-color: var(--fg);
+  }
+}

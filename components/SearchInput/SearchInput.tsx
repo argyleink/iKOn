@@ -1,6 +1,6 @@
 'use client'
 
-import type { Icon } from '@/lib/types'
+import type { Icon } from '@/lib/icons'
 import { useId } from 'react'
 import styles from './SearchInput.module.css'
 
@@ -11,12 +11,7 @@ type Props = {
   focusedIcon?: Icon | null
 }
 
-export function SearchInput({
-  value,
-  onChange,
-  onClear,
-  focusedIcon = null,
-}: Props) {
+export function SearchInput({ value, onChange, onClear, focusedIcon = null }: Props) {
   const labelId = useId()
 
   return (
@@ -28,28 +23,29 @@ export function SearchInput({
         {focusedIcon ? (
           <button
             type="button"
-            className={styles.chip}
             onClick={onClear}
             aria-label={`Selected: ${focusedIcon.name.replace(/-/g, ' ')}. Click to clear.`}
             title="selected · click to clear"
+            className={`flex-none self-center grid place-items-center w-[22px] h-[22px] p-0 bg-transparent border border-[var(--outline,var(--fg))] text-[var(--outline,var(--fg))] cursor-pointer pointer-events-auto transition-colors duration-150 hover:bg-[var(--outline,var(--fg))] hover:text-bg focus-visible:outline-2 focus-visible:outline-dashed focus-visible:[outline-color:var(--outline)] focus-visible:outline-offset-[3px] ${styles.chip}`}
           >
             <span
               key={focusedIcon.id}
-              className={styles.chipIcon}
+              className={`grid place-items-center w-4 h-4 text-current [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:fill-none [&>svg]:[stroke-width:2] [&>svg[data-pack=phosphor]]:stroke-none [&>svg[data-pack=phosphor]]:fill-current ${styles.chipIcon}`}
               aria-hidden="true"
               dangerouslySetInnerHTML={{ __html: focusedIcon.svg }}
             />
           </button>
         ) : null}
         <input
-          className={styles.input}
+          className={`flex-1 min-w-0 bg-transparent border-0 outline-none text-fg font-[inherit] [font-size:clamp(1.25rem,5vw,3rem)] tracking-[0.04em] uppercase text-center w-full p-0 appearance-none [-webkit-tap-highlight-color:transparent] ${styles.input}`}
           type="search"
+          inputMode="search"
+          enterKeyHint="search"
           value={value}
           spellCheck={false}
           autoCapitalize="off"
           autoCorrect="off"
           autoComplete="off"
-          placeholder="search icons"
           // biome-ignore lint/a11y/noAutofocus: primary interaction of the app.
           autoFocus
           aria-labelledby={labelId}
@@ -58,14 +54,6 @@ export function SearchInput({
             if (e.key === 'Escape') onClear()
           }}
         />
-        <svg
-          className={styles.underline}
-          viewBox="0 0 100 2"
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          <path d="M 0 1 L 100 1" pathLength={100} />
-        </svg>
       </label>
     </search>
   )
