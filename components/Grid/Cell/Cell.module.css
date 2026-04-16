@@ -14,8 +14,20 @@
   transform: scale(var(--enter-scale, 1));
   opacity: var(--alpha, 1);
   transform-origin: 50% 50%;
-  transition: transform var(--swap-in, 720ms) var(--spring);
+  /* Opacity in the base transition enables the slow hover-out trail: when
+     the hover rule releases, opacity falls back to `--alpha` over 720ms
+     (the hover rule's own 120ms transition only applies while hover is
+     active). Transform keeps its spring curve; opacity uses a plain
+     ease-out so the fade reads linearly and avoids any bounce. */
+  transition: transform var(--swap-in, 720ms) var(--spring), opacity 720ms var(--ease-out-3);
   transition-delay: var(--d, 0ms);
+  /* Keep each layer on its own compositor layer so the mass scale-out at
+     exit time doesn't trigger a full re-raster of 200+ SVGs in one frame.
+     `will-change: transform` is what forces GPU promotion; `contain`
+     isolates layout/paint per-cell so a hover on one cell can't invalidate
+     its neighbors. This is the fix for the intermittent exit chop. */
+  will-change: transform;
+  contain: layout style paint;
 }
 
 /* Fresh mount: start from scale(0); transition above carries it to rest. */

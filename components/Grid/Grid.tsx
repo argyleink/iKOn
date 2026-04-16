@@ -3,6 +3,16 @@
 import type { Icon } from '@/lib/icons'
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { Toaster, toast } from 'sonner'
+import { Config, type ConfigValues, DEFAULT_CONFIG, INITIAL_VARS, applyConfig } from '../Config'
+import { SearchInput } from '../SearchInput'
+import { GridCells } from './GridCells'
+import { Loader } from './Loader'
+import { type Mode, useCellAssembly } from './hooks/useCellAssembly'
+import { useGlobalKeys } from './hooks/useGlobalKeys'
+import { useGridMetrics } from './hooks/useGridMetrics'
+import { useIconDB } from './hooks/useIconDB'
+import { useShake } from './hooks/useShake'
+import { useSwapCycle } from './hooks/useSwapCycle'
 
 /** Deep-link each icon pack to its open-source browser page. Phosphor and
  *  iconoir don't have per-name detail URLs so we pre-fill their search. */
@@ -17,16 +27,6 @@ function iconSourceUrl(icon: Icon): string {
       return `https://iconoir.com/?s=${name}`
   }
 }
-import { Config, type ConfigValues, DEFAULT_CONFIG, INITIAL_VARS, applyConfig } from '../Config'
-import { SearchInput } from '../SearchInput'
-import { GridCells } from './GridCells'
-import { Loader } from './Loader'
-import { type Mode, useCellAssembly } from './hooks/useCellAssembly'
-import { useGlobalKeys } from './hooks/useGlobalKeys'
-import { useGridMetrics } from './hooks/useGridMetrics'
-import { useIconDB } from './hooks/useIconDB'
-import { useShake } from './hooks/useShake'
-import { useSwapCycle } from './hooks/useSwapCycle'
 
 export function Grid() {
   const mainRef = useRef<HTMLElement | null>(null)
@@ -47,7 +47,9 @@ export function Grid() {
     if (mainRef.current) applyConfig(config, mainRef.current)
   }, [config])
 
-  // Rainbow: cycle selection + outline colors via refs (no querySelector).
+  // Rotate the text-selection P3 color on each new non-empty selection.
+  // Focus ring color is white now (superellipse .focus-visible), so there's
+  // no more --outline cycling.
   useEffect(() => {
     const el = mainRef.current
     if (!el) return
@@ -61,20 +63,8 @@ export function Grid() {
       'color(display-p3 0.8 0.35 1)',
       'color(display-p3 1 0.45 0.85)',
     ]
-    const OUT = [
-      'color(display-p3 1 0.1 0.45)',
-      'color(display-p3 1 0.5 0.05)',
-      'color(display-p3 1 0.9 0.15)',
-      'color(display-p3 0.3 1 0.4)',
-      'color(display-p3 0.05 0.95 0.9)',
-      'color(display-p3 0.25 0.5 1)',
-      'color(display-p3 0.75 0.2 1)',
-      'color(display-p3 1 0.2 0.8)',
-    ]
     let si = Math.floor(Math.random() * SEL.length)
-    let oi = Math.floor(Math.random() * OUT.length)
     let lastRange = ''
-    let lastFocus: EventTarget | null = null
 
     const onSelection = () => {
       const sel = window.getSelection()
@@ -86,18 +76,8 @@ export function Grid() {
       si = (si + 1) % SEL.length
       el.style.setProperty('--selection', SEL[si])
     }
-    const onFocus = (e: FocusEvent) => {
-      if (e.target === lastFocus) return
-      lastFocus = e.target
-      oi = (oi + 1) % OUT.length
-      el.style.setProperty('--outline', OUT[oi])
-    }
     document.addEventListener('selectionchange', onSelection)
-    document.addEventListener('focusin', onFocus)
-    return () => {
-      document.removeEventListener('selectionchange', onSelection)
-      document.removeEventListener('focusin', onFocus)
-    }
+    return () => document.removeEventListener('selectionchange', onSelection)
   }, [])
 
   const mode = useMemo<Mode>(() => {
@@ -159,7 +139,7 @@ export function Grid() {
   const handleCopy = useCallback((icon: Icon, _el: HTMLButtonElement) => {
     const preview = (
       <span
-        className="inline-grid place-items-center w-6 h-6 text-fg [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:fill-none [&>svg[data-pack=phosphor]]:stroke-none [&>svg[data-pack=phosphor]]:fill-current"
+        className="inline-grid place-items-center w-9 h-9 text-fg [&>svg]:w-full [&>svg]:h-full [&>svg]:stroke-current [&>svg]:fill-none [&>svg[data-pack=phosphor]]:stroke-none [&>svg[data-pack=phosphor]]:fill-current"
         dangerouslySetInnerHTML={{ __html: icon.svg }}
       />
     )
@@ -175,8 +155,7 @@ export function Grid() {
           onClick: () => window.open(sourceUrl, '_blank', 'noopener,noreferrer'),
         },
       })
-    const onFailure = () =>
-      toast.error('copy failed', { icon: preview, description: icon.name })
+    const onFailure = () => toast.error('copy failed', { icon: preview, description: icon.name })
 
     // Prefer the richer async ClipboardItem API — it auto-prompts for
     // permission on capable browsers and publishes both plain text (raw
@@ -262,6 +241,7 @@ export function Grid() {
           onChange={handleQueryChange}
           onClear={resetContext}
           focusedIcon={focusIcon}
+          noResults={mode.kind === 'search' && resultCount === 0}
         />
       </div>
 
