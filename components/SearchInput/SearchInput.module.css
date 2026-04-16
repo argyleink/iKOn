@@ -4,6 +4,15 @@
   animation: caret-cycle 3360ms steps(8, end) infinite;
 }
 
+/* While a placeholder tip is visible, hide the caret so it doesn't compete
+   with the tip copy. Chromium matches `:placeholder-shown` even when the
+   attribute is the empty string, so we exclude that explicitly — the caret
+   cycle resumes as soon as tips turn off or a tip string clears. */
+.input:not([placeholder=""]):placeholder-shown {
+  animation: none;
+  caret-color: transparent;
+}
+
 @keyframes caret-cycle {
   0% {
     caret-color: color(display-p3 1 0.05 0.35);
