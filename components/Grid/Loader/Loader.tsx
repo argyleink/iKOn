@@ -12,7 +12,7 @@ export function Loader() {
         <span className="text-dim text-[11px] uppercase tracking-[0.14em]">loading icons…</span>
         <span
           key={idx}
-          className="text-fg text-[13px] lowercase tracking-[0.04em] [animation:tip-reveal_520ms_var(--ease-out-3)]"
+          className="text-fg text-[13px] lowercase tracking-[0.04em] text-balance [animation:tip-reveal_520ms_var(--ease-out-3)]"
         >
           {tip}
         </span>
