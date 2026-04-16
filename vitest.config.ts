@@ -8,6 +8,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     include: ['**/*.test.{ts,tsx}'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/*.vr.test.{ts,tsx}'],
   },
   resolve: {
     alias: { '@': new URL('./', import.meta.url).pathname },

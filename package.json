@@ -16,7 +16,9 @@
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "vr": "tsx scripts/vr/run.ts",
+    "vr:update": "tsx scripts/vr/run.ts --update"
   },
   "dependencies": {
     "next": "16.2.3",
@@ -38,6 +40,7 @@
     "iconoir": "^7.10.1",
     "jsdom": "^25.0.1",
     "lucide-static": "^0.468.0",
+    "playwright": "^1.59.1",
     "tailwindcss": "^4",
     "tsx": "^4.19.2",
     "typescript": "^5",
