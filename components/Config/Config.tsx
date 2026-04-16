@@ -9,6 +9,7 @@ export type ConfigValues = {
   ringStepMs: number
   swapInMs: number
   swapOutMs: number
+  enterScale: number
   bg: string
   fg: string
   spring: keyof typeof SPRING_VARS
@@ -29,7 +30,8 @@ export const DEFAULT_CONFIG: ConfigValues = {
   gapPx: 1,
   ringStepMs: 38,
   swapInMs: 720,
-  swapOutMs: 720,
+  swapOutMs: 350,
+  enterScale: 1,
   bg: '#000000',
   fg: '#ffffff',
   spring: 'spring 3',
@@ -45,7 +47,8 @@ export const INITIAL_VARS: Record<string, string> = {
   '--cell': '48px',
   '--gap': '1px',
   '--swap-in': '720ms',
-  '--swap-out': '720ms',
+  '--swap-out': '350ms',
+  '--enter-scale': '1',
   // `--spring` points at one of open-props's `--ease-spring-*` vars.
   // CSS files use `var(--spring)` so the user's choice takes effect
   // without overriding open-props's own definitions.
@@ -63,6 +66,7 @@ export function applyConfig(cfg: ConfigValues, el: HTMLElement) {
   s.setProperty('--gap', `${cfg.gapPx}px`)
   s.setProperty('--swap-in', `${cfg.swapInMs}ms`)
   s.setProperty('--swap-out', `${cfg.swapOutMs}ms`)
+  s.setProperty('--enter-scale', String(cfg.enterScale))
   s.setProperty('--bg', cfg.bg)
   s.setProperty('--fg', cfg.fg)
   s.setProperty('--dim', `color-mix(in oklab, ${cfg.fg} 42%, transparent)`)
@@ -133,7 +137,7 @@ export function Config({ open, values, onChange, onClose }: Props) {
       <Slider
         label="ring step (ms/cell)"
         min={0}
-        max={80}
+        max={240}
         step={1}
         value={values.ringStepMs}
         onChange={(v) => set('ringStepMs', v)}
@@ -153,6 +157,14 @@ export function Config({ open, values, onChange, onClose }: Props) {
         step={20}
         value={values.swapOutMs}
         onChange={(v) => set('swapOutMs', v)}
+      />
+      <Slider
+        label="enter scale (×)"
+        min={0.5}
+        max={1.5}
+        step={0.05}
+        value={values.enterScale}
+        onChange={(v) => set('enterScale', v)}
       />
       <Row>
         <span className="text-dim whitespace-nowrap">spring</span>
