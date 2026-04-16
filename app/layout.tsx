@@ -1,11 +1,10 @@
-import { Rainbow } from '@/components/Rainbow'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
   title: 'iKOn — icon discovery by association',
   description:
-    'Search and browse icons by similarity. Results radiate from the center like a shockwave.',
+    'Search and browse icons by similarity. Design and name inspired by the Teenage Engineering KO-II EP-133 screen aesthetic.',
   applicationName: 'iKOn',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
@@ -31,13 +30,14 @@ export const viewport: Viewport = {
   interactiveWidget: 'resizes-visual',
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="en">
-      <body>
-        <Rainbow />
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   )
 }
