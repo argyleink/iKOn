@@ -1,9 +1,7 @@
-/* Only styles that Tailwind can't express — the dynamic grid template
-   that reads --cols and --cell from inline style. */
 .grid {
   display: grid;
   grid-template-columns: repeat(var(--cols), var(--cell));
-  grid-auto-rows: var(--cell);
+  grid-template-rows: repeat(var(--rows), var(--cell));
   justify-content: center;
   align-content: center;
   column-gap: var(--gap);

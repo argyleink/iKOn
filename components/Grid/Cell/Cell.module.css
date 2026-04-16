@@ -1,0 +1,95 @@
+/* Transition-only animation — no keyframes, no fill-mode conflicts.
+   State is driven by data attributes on the grid wrapper:
+     data-entered  → layer transitions from scale(0) to scale(1)
+     data-phase="exiting" → layer transitions to scale(0) uniformly */
+
+.cell {
+  transition-duration: 420ms, 200ms;
+  transition-timing-function: var(--spring), var(--ease-out);
+}
+
+/* --- Layer: resting state is scale(0) opacity(0) until data-entered --- */
+
+.layer {
+  transform: scale(0);
+  opacity: 0;
+  transform-origin: 50% 50%;
+  transition-property: transform, opacity;
+  transition-duration: var(--swap-in, 720ms);
+  transition-timing-function: var(--spring), var(--ease-out);
+  transition-delay: var(--d, 0ms);
+}
+
+/* Entered: scale up to resting state with per-cell radial stagger. */
+[data-entered] .layer {
+  transform: scale(1);
+  opacity: var(--alpha, 1);
+}
+
+/* Exit: collapse to 0 uniformly — no stagger, fast. */
+[data-phase="exiting"] .layer {
+  transform: scale(0) !important;
+  opacity: 0 !important;
+  transition-duration: var(--swap-out, 460ms) !important;
+  transition-timing-function: var(--ease-out) !important;
+  transition-delay: 0s !important;
+}
+
+/* Hover: fast scale up + full opacity. The slow release back to resting
+   is handled by the base transition-duration on .layer (720ms). */
+.cell:hover:not([data-empty]) .layer,
+.cell:focus-visible .layer {
+  transform: scale(1.15);
+  opacity: 1;
+  transition-duration: 120ms;
+  transition-delay: 0s;
+}
+
+/* hide-until-hover mode: cells are invisible until hovered. */
+[data-hide-until-hover] .layer {
+  opacity: 0 !important;
+}
+[data-hide-until-hover] .cell:hover:not([data-empty]) .layer,
+[data-hide-until-hover] .cell:focus-visible .layer {
+  opacity: 1 !important;
+}
+
+/* SVG */
+.layer svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: var(--stroke, 1.75);
+  transition: stroke-width 120ms var(--ease-out);
+}
+
+.cell:hover:not([data-empty]) .layer svg,
+.cell:focus-visible .layer svg {
+  stroke-width: 2.25;
+}
+
+.layer svg[data-pack="phosphor"] {
+  stroke: none;
+  fill: currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layer {
+    transform: none;
+    transition: opacity 240ms var(--ease-fun);
+    transition-delay: var(--d, 0ms);
+  }
+  [data-entered] .layer {
+    opacity: var(--alpha, 1);
+  }
+  [data-phase="exiting"] .layer {
+    opacity: 0 !important;
+    transition-duration: var(--swap-out, 460ms) !important;
+    transition-delay: 0s !important;
+  }
+  .layer svg {
+    stroke-width: 1.75;
+    transition: none;
+  }
+}

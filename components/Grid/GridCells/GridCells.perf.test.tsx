@@ -1,3 +1,4 @@
+import type { Icon } from '@/lib/icons'
 /**
  * Performance regression test for the cell grid.
  *
@@ -16,8 +17,7 @@
 import { act, cleanup, render } from '@testing-library/react'
 import { Profiler, type ProfilerOnRenderCallback, useState } from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { measureGrid } from '@/lib/grid'
-import type { Icon } from '@/lib/types'
+import { measureGrid } from '../metrics'
 import { GridCells } from './GridCells'
 
 const COLS = 20
@@ -122,7 +122,6 @@ describe('GridCells — performance', () => {
     // Harness that lets us flip metrics at will.
     function Harness() {
       const [{ cols, rows }, setMetrics] = useState({ cols: COLS, rows: ROWS })
-      // biome-ignore lint/correctness/useHookAtTopLevel: test harness only
       ;(Harness as unknown as { _set?: (c: number, r: number) => void })._set = (c, r) =>
         setMetrics({ cols: c, rows: r })
       const m = measureGrid(cols * CELL_PX, rows * CELL_PX, CELL_PX)
@@ -168,8 +167,7 @@ describe('GridCells — performance', () => {
 
     function Harness() {
       const [step, setStep] = useState(0)
-      ;(Harness as unknown as { _next?: () => void })._next = () =>
-        setStep((s) => s + 1)
+      ;(Harness as unknown as { _next?: () => void })._next = () => setStep((s) => s + 1)
       const pool = step === 0 ? poolA : step === 1 ? poolB : poolC
       return <GridCells {...baseProps(pool)} />
     }
