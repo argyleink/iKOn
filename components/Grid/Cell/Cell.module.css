@@ -54,6 +54,17 @@
   opacity: 1 !important;
 }
 
+/* Active (click): scale down with spring easing over 700ms. The spring
+   curve overshoots below 0.85, settles, and bounces — released :active
+   reverts to the hover/resting state via the base transition. */
+.cell:active:not([data-empty]) .layer {
+  transform: scale(0.85);
+  transition-property: transform;
+  transition-duration: 700ms;
+  transition-timing-function: var(--ease-spring-3);
+  transition-delay: 0s;
+}
+
 /* SVG */
 .layer svg {
   width: 100%;
