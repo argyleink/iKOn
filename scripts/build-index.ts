@@ -185,10 +185,14 @@ async function main() {
 
   await mkdir('public', { recursive: true })
   await writeFile('public/icons.json', json)
-  await writeFile(
-    'lib/icons.meta.ts',
-    `export const ICON_INDEX_HASH = '${hash}'\nexport const ICON_COUNT = ${indexed.length}\n`,
-  )
+
+  // Rewrite the two constants at the bottom of lib/icons.ts without
+  // disturbing the shared type definitions above.
+  const iconsFile = await readFile('lib/icons.ts', 'utf-8')
+  const updated = iconsFile
+    .replace(/export const ICON_INDEX_HASH = '[^']*'/, `export const ICON_INDEX_HASH = '${hash}'`)
+    .replace(/export const ICON_COUNT = \d+/, `export const ICON_COUNT = ${indexed.length}`)
+  await writeFile('lib/icons.ts', updated)
 
   console.log(
     `done in ${((Date.now() - start) / 1000).toFixed(1)}s — ${indexed.length} icons — ${hash}`,
