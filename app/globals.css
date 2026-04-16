@@ -46,6 +46,25 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Superellipse corner shape with a rounded-rect fallback. Applied to every
+   focusable button via `.superellipse` and to the search chip. Works as a
+   progressive enhancement — browsers without corner-shape get border-radius
+   only, which still looks intentional. */
+.superellipse {
+  border-radius: 10px;
+}
+@supports (corner-shape: superellipse(1.25)) {
+  .superellipse {
+    corner-shape: superellipse(1.25);
+  }
+}
+
+/* Keyboard focus ring: solid white border with the superellipse shape. */
+.superellipse:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 3px;
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;

@@ -100,7 +100,7 @@ export function Config({ open, values, onChange, onClose }: Props) {
 
   return (
     <aside
-      className={`fixed top-4 right-4 z-[200] w-80 p-3.5 bg-bg border border-faint text-fg text-[10px] tracking-[0.08em] backdrop-blur-md max-h-[calc(100vh-32px)] overflow-y-auto [scrollbar-width:thin] ${styles.panel}`}
+      className={`fixed z-[200] bg-bg border border-faint text-fg text-[10px] tracking-[0.08em] backdrop-blur-md overflow-y-auto [scrollbar-width:thin] inset-0 w-full max-h-none p-4 sm:inset-auto sm:top-4 sm:right-4 sm:w-80 sm:max-h-[calc(100vh-32px)] sm:p-3.5 ${styles.panel}`}
       aria-label="config"
     >
       <header className="flex items-center justify-between pb-2.5 border-b border-faint text-fg uppercase">
